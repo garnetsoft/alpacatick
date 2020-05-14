@@ -78,9 +78,6 @@ class KdbThread(Thread):
             #self.q.sendAsync("{y insert x}", np.string_(message), np.string_("raw"))
             #self.q.sendAsync("{data:.j.k x; y insert enlist data}", message, np.string_("evt"))
             self.q.sendAsync("upd", np.string_("raw"), np.string_(message))
-
-            if 1 < 2:
-                return
                 
             # now update trade and quote -
             msg_json = json.loads(message)
@@ -122,9 +119,15 @@ class KdbThread(Thread):
             print(f'XXXX processed {self.count} kdb records')        
 
 
+    def update_raw(self, messages):
+        raw = {self.count + i : m for i, m in enumerate(messages)}
+        
+        self.q.sendAsync("upd", np.string_("raw"), [list(raw.keys()), list(raw.values)])
+
+
     def process_trades(self, messages):
         try:
-            self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
+            #self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
 
             # trades 
             evt_list = []
@@ -165,7 +168,7 @@ class KdbThread(Thread):
 
     def process_quotes(self, messages):
         try:
-            self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
+            #self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
             
             # trades 
             evt_list = []

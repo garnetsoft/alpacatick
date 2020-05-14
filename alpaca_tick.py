@@ -39,6 +39,11 @@ sub_req = {
     }
 }
 
+wss_status = {
+    "action": "status",
+    "data": "xxx"
+}
+
 msg_count = 0
 
 def on_message(ws, message):
@@ -59,9 +64,15 @@ def on_error(ws, error):
     print('xxxx wss on_error:')
     print(error)
 
+    wss_status['data'] = f'xxxx wss on_error: {error}'
+    queue.put(wss_status)
+
 
 def on_close(ws):    
     print("### wss closed ###")
+
+    wss_status['data'] = "xxxx wss closed"
+    queue.put(wss_status)
 
 
 def on_open(ws):
