@@ -136,7 +136,7 @@ if __name__ == "__main__":
         #sys.exit(-1)
         load_app_config('app.config')
     else:
-        load_app_config(argv[1])
+        load_app_config(sys.argv[1])
 
     try: 
         # start Kdb+ data thread

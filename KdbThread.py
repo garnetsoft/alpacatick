@@ -131,7 +131,6 @@ class KdbThread(Thread):
             
             for message in messages:
                 msg_json = json.loads(message)
-                stream = msg_json['stream']
                 data = msg_json['data']
 
                 # get trade field from data
