@@ -91,7 +91,7 @@ def on_open(ws):
 
         #result =  ws.recv()
         #print("Received '%s'" % result)
-        print('xxxx listening for trades and quotes...')
+        print('xxxx listening for ', config['stream'])
         time.sleep(60*60)
 
         print("xxxx wss thread terminating...")
