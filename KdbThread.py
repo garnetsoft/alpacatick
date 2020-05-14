@@ -77,6 +77,9 @@ class KdbThread(Thread):
             #self.q.sendAsync("{data:.j.k x; y insert enlist data}", message, np.string_("evt"))
             self.q.sendAsync("upd", np.string_("raw"), np.string_(message))
 
+            if 1 < 2:
+                return
+                
             # now update trade and quote -
             msg_json = json.loads(message)
             #print('xxxx json obj: {}, {}'.format(type(msg_json), msg_json))
@@ -91,6 +94,7 @@ class KdbThread(Thread):
             # quote:flip `ev`T`x`p`s`X`P`S`c`t!"**ffffff*f"$\:()
 
             msg_type = stream[:2]
+            msg_type = "XX"
             #print('xxxx DEBUG msg_type: ', msg_type)
             if msg_type == "T.":
                 #self.q.sendAsync("{data:.j.k x; y insert enlist data[`data]}", message, np.string_("trade"))
@@ -109,18 +113,110 @@ class KdbThread(Thread):
             print('xxx processing to Kdb error: ', e)
 
 
+    def process_trades(self, messages):
+        try:
+            print(f'xxxx process2: msg count - {len(messages)}')
+            self.q.sendAsync("upd", np.string_("raw"), np.string_(messages))
+            
+            # trades 
+            evt_list = []
+            symbol_list = []
+            id_list = []
+            ex_list = []
+            price_list = []
+            size_list = []
+            tms_list = []
+            cond_list = []
+            tape_list = []
+            
+            for message in messages:
+                msg_json = json.loads(message)
+                stream = msg_json['stream']
+                data = msg_json['data']
+
+                # get trade field from data
+                # ['ev', 'T', 'i', 'x', 'p', 's', 't', 'c', 'z']                
+                evt_list.append(data['ev'])
+                symbol_list.append(data['T'])
+                id_list.append(float(data['i']))
+                ex_list.append(float(data['x']))
+                price_list.append(float(data['p']))
+                size_list.append(float(data['s']))
+                tms_list.append(float(data['t']))
+                cond_list.append(str(data['c']))
+                tape_list.append(float(data['z']))
+
+            kobj = [np.string_(evt_list), np.string_(symbol_list), id_list, ex_list, price_list, size_list, tms_list, cond_list, tape_list]        
+            print(f'xxxx $$$$ {kobj}')
+            self.q.sendAsync("upd", np.string_("trade"), kobj)
+
+
+        except Exception as e:
+            print('xxx processing to Kdb error: ', e)
+
+
+    def process_quotes(self, messages):
+        try:
+            print(f'xxxx process2: msg count - {len(messages)}')
+            self.q.sendAsync("upd", np.string_("raw"), np.string_(messages))
+            
+            # trades 
+            evt_list = []
+            symbol_list = []
+            exbid_list = []
+            bid_list = []
+            bsize_list = []
+            exask_list = []
+            ask_list = []            
+            asize_list = []
+            cond_list = []
+            tms_list = []
+            
+            for message in messages:
+                msg_json = json.loads(message)
+                data = msg_json['data']
+
+                # get quote field from data
+                # ['ev', 'T', 'x', 'p', 's', 'X', 'P', 'S', 'c', 't'] 
+                evt_list.append(data['ev'])
+                symbol_list.append(data['T'])
+                exbid_list.append(float(data['x']))
+                bid_list.append(float(data['p']))
+                bsize_list.append(float(data['s']))
+                exask_list.append(float(data['X']))
+                ask_list.append(float(data['P']))
+                asize_list.append(str(data['S']))
+                cond_list.append(float(data['c']))
+                tms_list.append(float(data['t']))
+
+            kobj = [np.string_(evt_list), np.string_(symbol_list), exbid_list, bid_list, bsize_list, exask_list, ask_list, asize_list, cond_list, tms_list]        
+            print(f'xxxx $$$$ {kobj}')
+            self.q.sendAsync("upd", np.string_("quote"), kobj)
+
+
+        except Exception as e:
+            print('xxx processing to Kdb error: ', e)
+
+
     def run(self):
         print('xxxx kdb data thread starting...',self.stopped())
         
         #while not self.stopped():
         while True:
             try:
-                tick = self.queue.get()
-                # print('xxxx Kdb thread got tick: ', tick)
-                self.process(tick)
+                # items = [q.get() for _ in range(q.qsize())]
+                print('xxxx Kdb thread got tick: ', self.queue.qsize())
+                ticks = [ self.queue.get() for _ in range(self.queue.qsize()) ]
+                # tick = self.queue.get()
+
+                # batching -
+                if config['stream'] == 'trade':
+                    process_trades(ticks)
+                elif config['stream'] == 'quote':
+                    process_quotes(ticks)
 
                 if self.stopped():
-                    break 
+                    break
 
             except Exception as e:
                 print(e)

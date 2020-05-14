@@ -90,7 +90,7 @@ def on_open(ws):
         #result =  ws.recv()
         #print("Received '%s'" % result)
         print('xxxx listening for trades and quotes...')
-        time.sleep(10)
+        time.sleep(60*60)
 
         print("xxxx wss thread terminating...")
         ws.close()
@@ -134,10 +134,11 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         usage()
         #sys.exit(-1)
+        load_app_config('app.config')
+    else:
+        load_app_config(argv[1])
 
     try: 
-        load_app_config('app.config')
-
         # start Kdb+ data thread
         kt = KdbThread(config, queue)
         kt.start()
@@ -153,7 +154,6 @@ if __name__ == "__main__":
         ticker_file = config['ticker_file']
         ws.on_open = on_open
         ws.run_forever()
-
 
         print('xxxx stopping kdb thread: ',kt)
         kt.stop()
