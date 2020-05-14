@@ -140,6 +140,7 @@ queue = Queue()
 
 
 if __name__ == "__main__":
+    print('xxxx main: ',sys.argv)
 
     if len(sys.argv) < 2:
         usage()
@@ -176,6 +177,9 @@ if __name__ == "__main__":
         sys.exit()
         print('xxxx DONE.')
 
+    except ConnectionResetError as ce:
+        print("==> ConnectionResetError: ", ce)
+        pass
     except Exception as e:
         print('....program exceptions, exiting...', e)
         sys.exit(-1)
