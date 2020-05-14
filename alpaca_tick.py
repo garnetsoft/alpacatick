@@ -77,8 +77,10 @@ def on_open(ws):
         print('XXXX tickers: ', args)
         sub_streams = []
         for ticker in args:
-            sub_streams.append(f'T.{ticker}')
-            sub_streams.append(f'Q.{ticker}')
+            if config['stream'] == 'trade':
+                sub_streams.append(f'T.{ticker}')
+            elif config['stream'] == 'quote':
+                sub_streams.append(f'Q.{ticker}')
 
         sub_req['data']['streams'] = sub_streams
         print('XXXX sub_req: ', sub_req)

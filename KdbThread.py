@@ -115,7 +115,7 @@ class KdbThread(Thread):
 
     def process_trades(self, messages):
         try:
-            print(f'xxxx process2: msg count - {len(messages)}')
+            print(f'xxxx process_trades, msg count: {len(messages)}')
             self.q.sendAsync("upd", np.string_("raw"), np.string_(messages))
             
             # trades 
@@ -146,7 +146,7 @@ class KdbThread(Thread):
                 tape_list.append(float(data['z']))
 
             kobj = [np.string_(evt_list), np.string_(symbol_list), id_list, ex_list, price_list, size_list, tms_list, cond_list, tape_list]        
-            print(f'xxxx $$$$ {kobj}')
+            #print(f'xxxx $$$$ {kobj}')
             self.q.sendAsync("upd", np.string_("trade"), kobj)
 
 
@@ -156,7 +156,7 @@ class KdbThread(Thread):
 
     def process_quotes(self, messages):
         try:
-            print(f'xxxx process2: msg count - {len(messages)}')
+            print(f'xxxx process_quotes, msg count: {len(messages)}')
             self.q.sendAsync("upd", np.string_("raw"), np.string_(messages))
             
             # trades 
@@ -184,12 +184,12 @@ class KdbThread(Thread):
                 bsize_list.append(float(data['s']))
                 exask_list.append(float(data['X']))
                 ask_list.append(float(data['P']))
-                asize_list.append(str(data['S']))
-                cond_list.append(float(data['c']))
+                asize_list.append(float(data['S']))
+                cond_list.append(str(data['c']))
                 tms_list.append(float(data['t']))
 
             kobj = [np.string_(evt_list), np.string_(symbol_list), exbid_list, bid_list, bsize_list, exask_list, ask_list, asize_list, cond_list, tms_list]        
-            print(f'xxxx $$$$ {kobj}')
+            #print(f'xxxx $$$$ {kobj}')
             self.q.sendAsync("upd", np.string_("quote"), kobj)
 
 
@@ -204,15 +204,18 @@ class KdbThread(Thread):
         while True:
             try:
                 # items = [q.get() for _ in range(q.qsize())]
-                print('xxxx Kdb thread got tick: ', self.queue.qsize())
+                if self.queue.empty():
+                    continue
+
                 ticks = [ self.queue.get() for _ in range(self.queue.qsize()) ]
                 # tick = self.queue.get()
+                print('xxxx Kdb thread got ticks: ', len(ticks))
 
                 # batching -
-                if config['stream'] == 'trade':
-                    process_trades(ticks)
-                elif config['stream'] == 'quote':
-                    process_quotes(ticks)
+                if self.config['stream'] == 'trade':
+                    self.process_trades(ticks)
+                elif self.config['stream'] == 'quote':
+                    self.process_quotes(ticks)
 
                 if self.stopped():
                     break
