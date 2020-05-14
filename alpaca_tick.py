@@ -39,12 +39,20 @@ sub_req = {
     }
 }
 
+msg_count = 0
 
 def on_message(ws, message):
     #print('xxxx wss on_message:')
     #print(message)
+
     # send to kdb
     queue.put(message)
+
+    global msg_count
+    msg_count += 1
+    
+    if msg_count % int(config['count']) == 0:
+        print(f'XXXX GOT {msg_count} wss messages')
 
 
 def on_error(ws, error):

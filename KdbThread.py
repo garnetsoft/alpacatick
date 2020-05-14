@@ -40,6 +40,8 @@ class KdbThread(Thread):
         self._initq()
         self._stopper = threading.Event()
 
+        self.count = 0
+
     # init q service - start if not running
     def _initq(self):
         try:
@@ -113,11 +115,17 @@ class KdbThread(Thread):
             print('xxx processing to Kdb error: ', e)
 
 
+    def update_count(self, n):
+        self.count += n
+
+        if self.count % int(self.config['count']) == 0:
+            print(f'XXXX processed {self.count} kdb records')        
+
+
     def process_trades(self, messages):
         try:
-            print(f'xxxx process_trades, msg count: {len(messages)}')
-            self.q.sendAsync("upd", np.string_("raw"), np.string_(messages))
-            
+            self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
+
             # trades 
             evt_list = []
             symbol_list = []
@@ -149,6 +157,7 @@ class KdbThread(Thread):
             #print(f'xxxx $$$$ {kobj}')
             self.q.sendAsync("upd", np.string_("trade"), kobj)
 
+            self.update_count(len(messages))
 
         except Exception as e:
             print('xxx processing to Kdb error: ', e)
@@ -156,8 +165,7 @@ class KdbThread(Thread):
 
     def process_quotes(self, messages):
         try:
-            print(f'xxxx process_quotes, msg count: {len(messages)}')
-            self.q.sendAsync("upd", np.string_("raw"), np.string_(messages))
+            self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
             
             # trades 
             evt_list = []
@@ -192,6 +200,7 @@ class KdbThread(Thread):
             #print(f'xxxx $$$$ {kobj}')
             self.q.sendAsync("upd", np.string_("quote"), kobj)
 
+            self.update_count(len(messages))
 
         except Exception as e:
             print('xxx processing to Kdb error: ', e)
@@ -209,7 +218,7 @@ class KdbThread(Thread):
 
                 ticks = [ self.queue.get() for _ in range(self.queue.qsize()) ]
                 # tick = self.queue.get()
-                print('xxxx Kdb thread got ticks: ', len(ticks))
+                #print('xxxx Kdb thread got ticks: ', len(ticks))
 
                 # batching -
                 if self.config['stream'] == 'trade':
