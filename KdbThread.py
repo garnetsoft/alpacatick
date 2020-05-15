@@ -129,6 +129,9 @@ class KdbThread(Thread):
             #self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
             #self.update_raw(messages)
 
+            stream_list = []
+            data_list = []
+
             # trade list
             evt_list = []
             symbol_list = []
@@ -142,7 +145,11 @@ class KdbThread(Thread):
             
             for message in messages:
                 msg_json = json.loads(message)
+                stream = msg_json.get('stream',"xxxaction")
                 data = msg_json['data']
+
+                #stream_list.append(stream)
+                #data_list.append(str(data))
 
                 # get trade field from data
                 # ['ev', 'T', 'i', 'x', 'p', 's', 't', 'c', 'z']                
@@ -156,8 +163,11 @@ class KdbThread(Thread):
                 cond_list.append(str(data['c']))
                 tape_list.append(float(data['z']))
 
+            # upd evt table -
+            #kevt = [np.string_(stream_list), np.string_(data_list)]
             kobj = [np.string_(evt_list), np.string_(symbol_list), id_list, ex_list, price_list, size_list, tms_list, cond_list, tape_list]        
             #print(f'xxxx $$$$ {kobj}')
+            #self.q.sendAsync("upd", np.string_("evt"), kevt)
             self.q.sendAsync("upd", np.string_("trade"), kobj)
 
             self.update_count(len(messages))
@@ -170,6 +180,9 @@ class KdbThread(Thread):
         try:
             #self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
             #self.update_raw(messages)
+
+            stream_list = []
+            data_list = []
 
             # quote list 
             evt_list = []
@@ -185,7 +198,11 @@ class KdbThread(Thread):
             
             for message in messages:
                 msg_json = json.loads(message)
+                stream = msg_json.get('stream','xxxaction')
                 data = msg_json['data']
+
+                #stream_list.append(stream)
+                #data_list.append(str(data))
 
                 # get quote field from data
                 # ['ev', 'T', 'x', 'p', 's', 'X', 'P', 'S', 'c', 't'] 
@@ -200,8 +217,10 @@ class KdbThread(Thread):
                 cond_list.append(str(data['c']))
                 tms_list.append(float(data['t']))
 
+            #kevt = [np.string_(stream_list), np.string_(data_list)]
             kobj = [np.string_(evt_list), np.string_(symbol_list), exbid_list, bid_list, bsize_list, exask_list, ask_list, asize_list, cond_list, tms_list]        
             #print(f'xxxx $$$$ {kobj}')
+            #self.q.sendAsync("upd", np.string_("evt"), kevt)
             self.q.sendAsync("upd", np.string_("quote"), kobj)
 
             self.update_count(len(messages))
