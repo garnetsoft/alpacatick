@@ -121,8 +121,7 @@ class KdbThread(Thread):
 
     def update_raw(self, messages):
         raw = {self.count + i : m for i, m in enumerate(messages)}
-        
-        self.q.sendAsync("upd", np.string_("raw"), [list(raw.keys()), list(raw.values)])
+        self.q.sendAsync("upd", np.string_("raw"), [list(raw.keys()), np.string_(list(raw.values()))])
 
 
     def process_trades(self, messages):
