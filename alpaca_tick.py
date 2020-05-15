@@ -41,8 +41,8 @@ sub_req = {
 }
 
 wss_status = {
-    "action": "status",
-    "data": "xxx"
+    "stream": "status",
+    "data": {"callback" : None}
 }
 
 msg_count = 0
@@ -62,17 +62,18 @@ def on_message(ws, message):
 
 
 def on_error(ws, error):
-    print('xxxx wss on_error:', datetime.now())
-    print(error)
+    status = f'xxxx wss {ws} on_error: {error}, {datetime.now()}'
+    print(status)
 
-    wss_status['data'] = f'xxxx wss on_error: {error}'
+    wss_status['data']['callback'] = status
     queue.put(wss_status)
 
 
-def on_close(ws):    
-    print("### wss closed ###", datetime.now())
+def on_close(ws):
+    status = f'### wss {ws} closed ###, {datetime.now()}'
+    print(status)
 
-    wss_status['data'] = "xxxx wss closed"
+    wss_status['data']['callback'] = status
     queue.put(wss_status)
 
 

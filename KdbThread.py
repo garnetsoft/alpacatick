@@ -7,6 +7,7 @@ import datetime
 import json
 import threading
 import random
+from datetime import datetime
 from threading import Thread
 from queue import Queue
 import configparser
@@ -46,7 +47,7 @@ class KdbThread(Thread):
     def _initq(self):
         try:
             h = self.config.get('kdb_host', 'localhost')
-            p=int(self.config.get('kdb_port', '5001'))
+            p=int(self.config.get('kdb_port', '6000'))
 
             print(f'xxxx connecting to q: {h}:{p}')            
             self.q = qconnection.QConnection(host=h, port=p)
@@ -57,7 +58,8 @@ class KdbThread(Thread):
             print('xxxx kdb time: ', self.q('.z.Z'))
 
         except Exception as e:
-            print('init Q error: ', e)
+            print(f'init Q error: {e}, exiting...')
+            sys.exit(-1)
 
 
     def stop(self):
@@ -92,31 +94,15 @@ class KdbThread(Thread):
             # trade:flip `ev`T`i`x`p`s`t`c`z!"**fffff*f"$\:()
             # quote:flip `ev`T`x`p`s`X`P`S`c`t!"**ffffff*f"$\:()
 
-            msg_type = stream[:2]
-            msg_type = "XX"
-            #print('xxxx DEBUG msg_type: ', msg_type)
-            if msg_type == "T.":
-                #self.q.sendAsync("{data:.j.k x; y insert enlist data[`data]}", message, np.string_("trade"))
-                trade = [np.string_(str(data[x])) if isinstance(data[x], str) or isinstance(data[x], list) else data[x] for x in ['ev', 'T', 'i', 'x', 'p', 's', 't', 'c', 'z'] ]
-                #print(trade)
-                self.q.sendAsync("upd", np.string_("trade"), trade)
-
-            elif msg_type == "Q.":
-                #self.q.sendAsync("{data:.j.k x; y insert enlist data[`data]}", message, np.string_("quote"))
-                quote = [np.string_(str(data[x])) if isinstance(data[x], str) or isinstance(data[x], list) else data[x] for x in ['ev', 'T', 'x', 'p', 's', 'X', 'P', 'S', 'c', 't'] ]
-                #print(quote)
-                self.q.sendAsync("upd", np.string_("quote"), quote)
-
-
         except Exception as e:
-            print('xxx processing to Kdb error: ', e)
+            print(f'Exception: XXXX {self.config["stream"]} processing to Kdb error: {e}, data: {messages}')
 
 
     def update_count(self, n):
         self.count += n
 
         if self.count % int(self.config['count']) == 0:
-            print(f'XXXX processed {self.count} kdb records')        
+            print(f'XXXX {self.config["stream"]} processed {self.count} kdb records')        
 
 
     def update_raw(self, messages):
@@ -127,7 +113,7 @@ class KdbThread(Thread):
     def process_trades(self, messages):
         try:
             #self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
-            #self.update_raw(messages)
+            self.update_raw(messages)
 
             stream_list = []
             data_list = []
@@ -145,11 +131,14 @@ class KdbThread(Thread):
             
             for message in messages:
                 msg_json = json.loads(message)
-                stream = msg_json.get('stream',"xxxaction")
+                stream = msg_json.get('stream')
                 data = msg_json['data']
 
-                #stream_list.append(stream)
-                #data_list.append(str(data))
+                stream_list.append(stream)
+                data_list.append(str(data))
+
+                if (data.get('ev') == None)
+                    continue
 
                 # get trade field from data
                 # ['ev', 'T', 'i', 'x', 'p', 's', 't', 'c', 'z']                
@@ -165,20 +154,20 @@ class KdbThread(Thread):
 
             # upd evt table -
             #kevt = [np.string_(stream_list), np.string_(data_list)]
+            #self.q.sendAsync("upd", np.string_("evt"), kevt)
+
             kobj = [np.string_(evt_list), np.string_(symbol_list), id_list, ex_list, price_list, size_list, tms_list, cond_list, tape_list]        
             #print(f'xxxx $$$$ {kobj}')
-            #self.q.sendAsync("upd", np.string_("evt"), kevt)
             self.q.sendAsync("upd", np.string_("trade"), kobj)
 
             self.update_count(len(messages))
 
         except Exception as e:
-            print('xxx processing to Kdb error: ', e)
+            print(f'Exception: XXXX {self.config["stream"]} processing to Kdb error: {e}, data: {messages}')
 
 
     def process_quotes(self, messages):
         try:
-            #self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
             #self.update_raw(messages)
 
             stream_list = []
@@ -201,8 +190,8 @@ class KdbThread(Thread):
                 stream = msg_json.get('stream','xxxaction')
                 data = msg_json['data']
 
-                #stream_list.append(stream)
-                #data_list.append(str(data))
+                stream_list.append(stream)
+                data_list.append(str(data))
 
                 # get quote field from data
                 # ['ev', 'T', 'x', 'p', 's', 'X', 'P', 'S', 'c', 't'] 
@@ -218,15 +207,16 @@ class KdbThread(Thread):
                 tms_list.append(float(data['t']))
 
             #kevt = [np.string_(stream_list), np.string_(data_list)]
+            #self.q.sendAsync("upd", np.string_("evt"), kevt)
+
             kobj = [np.string_(evt_list), np.string_(symbol_list), exbid_list, bid_list, bsize_list, exask_list, ask_list, asize_list, cond_list, tms_list]        
             #print(f'xxxx $$$$ {kobj}')
-            #self.q.sendAsync("upd", np.string_("evt"), kevt)
             self.q.sendAsync("upd", np.string_("quote"), kobj)
 
             self.update_count(len(messages))
 
         except Exception as e:
-            print('xxx processing to Kdb error: ', e)
+            print(f'Exception: XXXX processing to Kdb error: {e}, data: {messages}')
 
 
     def run(self):
@@ -258,7 +248,7 @@ class KdbThread(Thread):
             except:
                 self.stop()
 
-        print('xxxx closing kdb connection...')
+        print('xxxx closing kdb connection...', datetime.now())
         self.q.close()
 
-        print('xxxx kdb data thread exiting...')
+        print('xxxx kdb data thread exiting...', datetime.now())
