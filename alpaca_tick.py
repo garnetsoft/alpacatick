@@ -7,6 +7,7 @@ import datetime
 import json
 import threading
 import random
+from datetime import datetime
 from threading import Thread
 from queue import Queue
 import configparser
@@ -61,7 +62,7 @@ def on_message(ws, message):
 
 
 def on_error(ws, error):
-    print('xxxx wss on_error:')
+    print('xxxx wss on_error:', datetime.now())
     print(error)
 
     wss_status['data'] = f'xxxx wss on_error: {error}'
@@ -69,7 +70,7 @@ def on_error(ws, error):
 
 
 def on_close(ws):    
-    print("### wss closed ###")
+    print("### wss closed ###", datetime.now())
 
     wss_status['data'] = "xxxx wss closed"
     queue.put(wss_status)
@@ -107,13 +108,14 @@ def on_open(ws):
         # next send sub_req
         ws.send(json.dumps(sub_req))
         time.sleep(2)
+        print('xxxx listening for ', config['stream'])
 
         #result =  ws.recv()
         #print("Received '%s'" % result)
-        print('xxxx listening for ', config['stream'])
-        time.sleep(60*60)
+        # run for 12 hours
+        time.sleep(12*60*60)
 
-        print("xxxx wss thread terminating...")
+        print("xxxx wss thread terminating...", datetime.now())
         ws.close()
 
         print("xxxx wss thread terminated...")
@@ -151,7 +153,7 @@ queue = Queue()
 
 
 if __name__ == "__main__":
-    print('xxxx main: ',sys.argv)
+    print(f'xxxx main: {sys.argv}, {datetime.now()}')
 
     if len(sys.argv) < 2:
         usage()
