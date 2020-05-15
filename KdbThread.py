@@ -127,8 +127,9 @@ class KdbThread(Thread):
     def process_trades(self, messages):
         try:
             #self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
+            #self.update_raw(messages)
 
-            # trades 
+            # trade list
             evt_list = []
             symbol_list = []
             id_list = []
@@ -168,8 +169,9 @@ class KdbThread(Thread):
     def process_quotes(self, messages):
         try:
             #self.q.sendAsync("upd", np.string_("raw"), np.string_("|".join([m for m in messages])))
-            
-            # trades 
+            #self.update_raw(messages)
+
+            # quote list 
             evt_list = []
             symbol_list = []
             exbid_list = []
