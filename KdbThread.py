@@ -102,7 +102,7 @@ class KdbThread(Thread):
         self.count += n
 
         if self.count % int(self.config['count']) == 0:
-            print(f'XXXX {self.config["stream"]} processed {self.count} kdb records')        
+            print(f'XXXX {self.config["stream"]} processed {self.count} kdb records, {datetime.now()}')
 
 
     def update_raw(self, messages):
@@ -163,7 +163,7 @@ class KdbThread(Thread):
             self.update_count(len(messages))
 
         except Exception as e:
-            print(f'Exception: XXXX {self.config["stream"]} processing to Kdb error: {e}, data: {messages}')
+            print(f'Exception: {self.config["stream"]} processing to Kdb error: {e}, data: {messages}, {datetime.now()}')
 
 
     def process_quotes(self, messages):
@@ -219,7 +219,7 @@ class KdbThread(Thread):
             self.update_count(len(messages))
 
         except Exception as e:
-            print(f'Exception: XXXX processing to Kdb error: {e}, data: {messages}')
+            print(f'Exception: {self.config["stream"]} processing to Kdb error: {e}, data: {messages}, {datetime.now()}')
 
 
     def run(self):

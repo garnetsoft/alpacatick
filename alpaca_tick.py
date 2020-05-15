@@ -58,7 +58,7 @@ def on_message(ws, message):
     msg_count += 1
     
     if msg_count % int(config['count']) == 0:
-        print(f'XXXX GOT {msg_count} wss messages')
+        print(f'XXXX GOT {msg_count} wss messages, {datetime.now()}')
 
 
 def on_error(ws, error):
@@ -95,7 +95,6 @@ def on_open(ws):
         #result =  ws.recv()
         #print("Received '%s'" % result)
 
-        print('XXXX tickers: ', args)
         sub_streams = []
         for ticker in args:
             if config['stream'] == 'trade':
