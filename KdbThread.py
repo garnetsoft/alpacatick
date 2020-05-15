@@ -137,7 +137,7 @@ class KdbThread(Thread):
                 stream_list.append(stream)
                 data_list.append(str(data))
 
-                if (data.get('ev') == None)
+                if data.get('ev') == None:
                     continue
 
                 # get trade field from data
@@ -187,11 +187,14 @@ class KdbThread(Thread):
             
             for message in messages:
                 msg_json = json.loads(message)
-                stream = msg_json.get('stream','xxxaction')
+                stream = msg_json.get('stream')
                 data = msg_json['data']
 
-                stream_list.append(stream)
-                data_list.append(str(data))
+                #stream_list.append(stream)
+                #data_list.append(str(data))
+
+                if data.get('ev') == None:
+                    continue
 
                 # get quote field from data
                 # ['ev', 'T', 'x', 'p', 's', 'X', 'P', 'S', 'c', 't'] 
