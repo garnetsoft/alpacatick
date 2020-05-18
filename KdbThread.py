@@ -95,7 +95,7 @@ class KdbThread(Thread):
             # quote:flip `ev`T`x`p`s`X`P`S`c`t!"**ffffff*f"$\:()
 
         except Exception as e:
-            print(f'Exception: XXXX {self.config["stream"]} processing to Kdb error: {e}, data: {messages}')
+            print(f'Exception: XXXX {self.config["stream"]} processing to Kdb error: {e}, data: {message}')
 
 
     def update_count(self, n):
@@ -137,8 +137,8 @@ class KdbThread(Thread):
                 stream_list.append(stream)
                 data_list.append(str(data))
 
-                if data.get('ev') == None:
-                    continue
+                #if data.get('ev') == None:
+                #    continue
 
                 # get trade field from data
                 # ['ev', 'T', 'i', 'x', 'p', 's', 't', 'c', 'z']                
@@ -170,8 +170,8 @@ class KdbThread(Thread):
         try:
             #self.update_raw(messages)
 
-            stream_list = []
-            data_list = []
+            #stream_list = []
+            #data_list = []
 
             # quote list 
             evt_list = []
@@ -187,14 +187,14 @@ class KdbThread(Thread):
             
             for message in messages:
                 msg_json = json.loads(message)
-                stream = msg_json.get('stream')
+                #stream = msg_json.get('stream')
                 data = msg_json['data']
 
                 #stream_list.append(stream)
                 #data_list.append(str(data))
 
-                if data.get('ev') == None:
-                    continue
+                #if data.get('ev') == None:
+                #    continue
 
                 # get quote field from data
                 # ['ev', 'T', 'x', 'p', 's', 'X', 'P', 'S', 'c', 't'] 

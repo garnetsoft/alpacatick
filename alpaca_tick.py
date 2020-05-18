@@ -58,7 +58,7 @@ def on_message(ws, message):
     msg_count += 1
     
     if msg_count % int(config['count']) == 0:
-        print(f'XXXX GOT {msg_count} wss messages, {datetime.now()}')
+        print(f'XXXX wss GOT {msg_count} {config["stream"]} messages, {datetime.now()}')
 
 
 def on_error(ws, error):
