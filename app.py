@@ -14,6 +14,7 @@ import pandas as pd
 import numpy as np
 import json
 import configparser
+from collections import defaultdict
 
 
 import alpaca_trade_api as tradeapi
@@ -122,8 +123,6 @@ def send_basic_order(api, sym, qty, side):
         return False
 
 
-
-
 def initQ():
     # initialize connection
     q.open()
@@ -135,57 +134,110 @@ def initQ():
 def background_thread():
     """Example of how to send server generated events to clients."""
     count = 0
-    while True:        
-        socketio.sleep(10)
-        count += 1
+    signals_hist = []
+    signals_count_dict = defaultdict(int)
+    signals_count_map = {}
 
+    while True:
         #query = "0!update l2dv:open-2*dv, r2dv:open+2*dv, qtm:string qtm, atr:mx-mn  from select last qtm, n:count i, open:first price, mn:min price, mu:avg price, md:med price, mx:max price, dv:sdev price, vwap:size wavg price, close:last price, chg:last deltas price, volume:sum size by sym from trade"
         stats = q("get_summary2[]")
+        stats['count'] = count
+
         #print('xxxx: stats -')
         #print(stats.tail())
-        #stats_html = stats.to_html(classes="table table-hover table-bordered table-striped",header=True)
         stats_json = stats.to_json(orient='records')
         #print(stats_json)
+        #stats_html = stats.to_html(classes="table table-hover table-bordered table-striped",header=True)
 
         # APPLY signals and send orders to Alpaca, update real-time postions
         #print(stats.dtypes)
-        signal_long = stats.loc[(stats.n>=30) & (stats.close==stats.mx) & (stats.close>stats.open)] #, ['sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr']]
+        signal_long = stats.loc[(stats.n>=30) & (stats.close==stats.mx) & (stats.close>stats.open)].copy()
+        signal_long = stats.loc[(stats.n<1000)].copy() # testing mode
+        #, ['sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr']]
         signal_long['signal'] = 'Mom_Long'
+
         # send to order event queue -
         if len(signal_long) > 0:
             print('$$$$ got mom LONG signals: (send to Alexa) ')
             #print(signal_long)
             # check if any active positions -
         
-        signals_short = stats.loc[(stats.n>=30) & (stats.close==stats.mn) & (stats.close<stats.open)] #, ['sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr']]
+        signals_short = stats.loc[(stats.n>=30) & (stats.close==stats.mn) & (stats.close<stats.open)].copy()
         signals_short['signal'] = 'Mom_Short'
+
         if len(signals_short) > 0:
             print('$$$$ got SHORT signals: (send to Alexa) ')
             #print(signals_short)
 
-        signals = pd.concat([signal_long, signals_short])
-        if len(signals) > 0:
-            #print('xxxx signals: ')
-            print(signals[['sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal']])
+        # merge Long/Short signals -
+        signals_df = pd.concat([signal_long, signals_short])
+        signals_hist_df = pd.DataFrame()
 
-        signals2 = signals[['id', 'src', 'sym', 'price', 'volume', 'ps', 'tick', 'signal']]
-        signals_json = signals2.to_json(orient='records')
+        #stats['signal'] = np.where((stats.n>=30) & (stats.close==stats.mx) & (stats.close>stats.open), 'Mom_Long', '')
+        #stats['signal'] = np.where((stats.n<1000), 'Mom_Long', '')
+        #stats['signal'] = np.where((stats.n>=30) & (stats.close==stats.mn) & (stats.close<stats.open), 'Mom_Short', '')
+        #signals_df2 = stats.loc[stats.signal != '']
+        #print('HAAAAAAAAA')
+        #print(signals_df2)
+
+
+        if len(signals_df) > 0:
+            signals_ui = signals_df[['count', 'sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal']]
+            print('xxxx signals_ui: ')
+            print(signals_ui)
+
+            #### update signals_rank -- $$$ IMPL
+            for i, row in signals_df.iterrows():
+                
+                if signals_count_dict[row['sym']] == 0:
+                    signals_count_dict[row['sym']] += 1
+                    signals_count_map[row['sym']] = row
+                else:
+                    prev = signals_count_map[row['sym']]
+                    
+                    if prev['qtm'] != row['qtm']:
+                        signals_count_dict[row['sym']] += 1
+
+            print(f'$$$$: signals_count_dict: {signals_count_dict}')
+
+            signals_hist.append(signals_ui)
+            # keep just the last 5 signals
+            if len(signals_hist) > 5:
+                signals_hist = signals_hist[-5:]
+
+            # display only the last n signals -        
+            signals_hist_df = pd.concat(signals_hist).sort_values(by='count', ascending=False)
+            print('xxxx signal_hist_df')
+            print(signals_hist_df)
+
+        # last 5 signals
+        signals_html = signals_hist_df.to_html(classes="table table-hover table-bordered table-striped",header=True)
+        
+        # latest signals -
+        signals_tbl = signals_df[['id', 'qtm', 'src', 'sym', 'price', 'volume', 'ps', 'tick', 'signal']]
+        signals_json = signals_tbl.to_json(orient='records')
         #print('$$$$ signals_json')
         #print(signals_json)
 
-        signals_hist = signals[['sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal']]
-        signals_html = signals_hist.to_html(classes="table table-hover table-bordered table-striped",header=True)
 
+        # publish kdb upd time:
         tm = q("max exec qtm from select by sym from trade")
-        print(f'qtime: {tm}')
+        print(f'count: {count}, qtime: {tm}')
 
         socketio.emit('my_response',
-                      {'time':str(tm).split(" ")[0],
-                      'count': count, 
+                      {'count': count,
+                      'signals_rank': str(signals_count_dict),
                       'signals_html': signals_html,
+                      'time':str(tm).split(" ")[0],
                       'signal': signals_json,                       
                       'summary': stats_json,
                       }, namespace='/test')
+
+
+        # set update period
+        socketio.sleep(10)
+        count += 1
+
 
 
 @app.route('/')
@@ -210,7 +262,9 @@ def test_broadcast_message(message):
 
 @socketio.on('my_ping', namespace='/test')
 def ping_pong():
-    emit('my_pong')
+    # enrich this message - do a stock price update banner -    
+    emit('my_pong', {'data': 'kdb_time', 'hehe': 'haha'})
+
 
 
 @socketio.on('connect', namespace='/test')
@@ -245,8 +299,9 @@ get_account_info()
 
 
 # create connection object
-#q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
-q = qconnection.QConnection(host='aq101', port=6002, pandas=True)
+q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
+#q = qconnection.QConnection(host='aq101', port=6002, pandas=True)
+
 
 #### main ####
 if __name__ == '__main__':

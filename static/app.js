@@ -199,6 +199,11 @@ $(document).ready(function() {
           locked: true,
           //cls: 'id-column-cls'
         }, {
+          type: 'text',
+          title: 'qtm',
+          index: 'qtm',
+          width: 150,
+        }, {
           type: 'image',
           title: 'Logo',
           index: 'src',
@@ -339,34 +344,20 @@ $(document).ready(function() {
     // The callback function is invoked whenever the server emits data
     // to the client. The data is then displayed in the "Received"
     // section of the page.
-    var signal_hist = [];
+    // var signal_hist = [];
     socket.on('my_response', function(msg) {
         // show a flashing banner -
         // $('#log').append('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
+        $('#log').html(msg.signals_html);
+        $('#signals_rank').html(msg.signals_rank);
+
+        signalGrid.setTitle(msg.time)
+
         if (typeof msg.signal !== 'undefined') {
           var dobj = JSON.parse(msg.signal)
 
-          console.log('tttt: ', typeof(msg.time))
-          console.log(msg.time)
-          var qtime = Date.parse(msg.time)
-          console.log('qqqq: ', typeof(qtime))
-          console.log(qtime)
-
-          var last_signal_time = signalGrid.getTitle()
-          console.log('xxxx: ', typeof(last_signal_time))
-          console.log(last_signal_time)
-
-          if (dobj.length > 0) {
-            signal_hist.push(msg.signals_html)
-            signal_hist = signal_hist.slice(-5)
-            
-            // console.log('xxxx')
-            // console.log(signal_hist)
-            signal_reversed = signal_hist.reverse() 
-            $('#log').html(signal_reversed);
-  
+          if (dobj.length > 0) {  
             // var grid = FancyGrid.get('test');
-            signalGrid.setTitle(msg.time);
             signalGrid.setData(dobj)
             signalGrid.update()
           }
@@ -447,8 +438,8 @@ var renderPriceFn = function(o) {
 
 
 var signal_init = [
-  {"id":476,"sym":"WMT","price":[125.78,125.85,125.92,125.91,125.92],"src":"http://ny529s.com/logo/WMT.png","volume":86180.0, "ps":[2, 1, 5, 4], "tick": 7.7, "signal": "Long"},
-  {"id":1002,"sym":"WYNN","price":[85.05,85.075,85.075,85.135,85.135],"src":"http://ny529s.com/logo/GS.png","volume":79866.0, "ps":[2, 5, 1, 4], "tick": 8.8, "signal": "Short"}
+  {"id":476,  "qtm": "2020-05-21 19:26:13.758", "sym":"AAPL", "price":[125.78,125.85,125.92,125.91,125.92],"src":"http://ny529s.com/logo/AAPL.png","volume":86180.0, "ps":[2, 1, 5, 4], "tick": 7.7, "signal": "Long"},
+  {"id":1001, "qtm": "2020-05-21 19:26:13.758", "sym":"XOM",  "price":[85.05,85.075,85.075,85.135,85.135], "src":"http://ny529s.com/logo/XOM.png"," volume":79866.0, "ps":[2, 5, 1, 4], "tick": 8.8, "signal": "Short"}
 ]
 
 
