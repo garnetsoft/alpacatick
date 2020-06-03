@@ -339,4 +339,4 @@ q = qconnection.QConnection(host='aq101', port=6002, pandas=True)
 
 #### main ####
 if __name__ == '__main__':
-    socketio.run(app, debug=False)
+    socketio.run(app, debug=False, host='0.0.0.0')
