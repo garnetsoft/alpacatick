@@ -205,9 +205,11 @@ $(document).ready(function() {
           width: 150,
         }, {
           type: 'image',
-          title: 'Logo',
+          title: 'Company',
           index: 'src',
           width: 80,
+          resizable: true,
+          autoHeight: true,
           cls: 'photo'
         }, {
           title: 'Ticker',
@@ -293,7 +295,185 @@ $(document).ready(function() {
         ]
     });
 
-    
+/*
+  var priceChart = Highcharts.chart('priceChart', {
+
+      title: {
+          text: 'Solar Employment Growth by Sector, 2010-2016'
+      },
+  
+      subtitle: {
+          text: 'Source: thesolarfoundation.com'
+      },
+  
+      yAxis: {
+          title: {
+              text: 'Number of Employees'
+          }
+      },
+  
+      xAxis: {
+          accessibility: {
+              rangeDescription: 'Range: 2010 to 2017'
+          }
+      },
+  
+      legend: {
+          layout: 'vertical',
+          align: 'right',
+          verticalAlign: 'middle'
+      },
+  
+      plotOptions: {
+          series: {
+              label: {
+                  connectorAllowed: false
+              },
+              pointStart: 2010
+          }
+      },
+  
+      series: [{
+          name: 'Installation',
+          data: [43934, 52503, 57177, 69658, 97031, 119931, 137133, 154175]
+      }, {
+          name: 'Other',
+          data: [12908, 5948, 8105, 11248, 8989, 11816, 18274, 18111]
+      }],
+  
+      responsive: {
+          rules: [{
+              condition: {
+                  maxWidth: 500
+              },
+              chartOptions: {
+                  legend: {
+                      layout: 'horizontal',
+                      align: 'center',
+                      verticalAlign: 'bottom'
+                  }
+              }
+          }]
+      }
+
+  });
+
+  
+var bubbleChart =  Highcharts.chart('bubbleChart', {
+
+      chart: {
+          type: 'bubble',
+          plotBorderWidth: 1,
+          zoomType: 'xy'
+      },
+
+      legend: {
+          enabled: false
+      },
+
+      title: {
+          text: 'Sugar and fat intake per country'
+      },
+
+      subtitle: {
+          text: 'Source: <a href="http://www.euromonitor.com/">Euromonitor</a> and <a href="https://data.oecd.org/">OECD</a>'
+      },
+
+      accessibility: {
+          point: {
+              valueDescriptionFormat: '{index}. {point.name}, fat: {point.x}g, sugar: {point.y}g, obesity: {point.z}%.'
+          }
+      },
+
+      xAxis: {
+          gridLineWidth: 1,
+          title: {
+              text: 'Daily fat intake'
+          },
+          labels: {
+              format: '{value} gr'
+          },
+          plotLines: [{
+              color: 'black',
+              dashStyle: 'dot',
+              width: 2,
+              value: 65,
+              label: {
+                  rotation: 0,
+                  y: 15,
+                  style: {
+                      fontStyle: 'italic'
+                  },
+                  text: 'Safe fat intake 65g/day'
+              },
+              zIndex: 3
+          }],
+          accessibility: {
+              rangeDescription: 'Range: 60 to 100 grams.'
+          }
+      },
+
+      yAxis: {
+          startOnTick: false,
+          endOnTick: false,
+          title: {
+              text: 'Daily sugar intake'
+          },
+          labels: {
+              format: '{value} gr'
+          },
+          maxPadding: 0.2,
+          plotLines: [{
+              color: 'black',
+              dashStyle: 'dot',
+              width: 2,
+              value: 50,
+              label: {
+                  align: 'right',
+                  style: {
+                      fontStyle: 'italic'
+                  },
+                  text: 'Safe sugar intake 50g/day',
+                  x: -10
+              },
+              zIndex: 3
+          }],
+          accessibility: {
+              rangeDescription: 'Range: 0 to 160 grams.'
+          }
+      },
+
+      tooltip: {
+          useHTML: true,
+          headerFormat: '<table>',
+          pointFormat: '<tr><th colspan="2"><h3>{point.country}</h3></th></tr>' +
+              '<tr><th>Fat intake:</th><td>{point.x}g</td></tr>' +
+              '<tr><th>Sugar intake:</th><td>{point.y}g</td></tr>' +
+              '<tr><th>Obesity (adults):</th><td>{point.z}%</td></tr>',
+          footerFormat: '</table>',
+          followPointer: true
+      },
+
+      plotOptions: {
+          series: {
+              dataLabels: {
+                  enabled: true,
+                  format: '{point.name}'
+              }
+          }
+      },
+
+      series: [{
+          data: [
+              { x: 95, y: 95, z: 13.8, name: 'BE', country: 'US' },
+              { x: 86.5, y: 102.9, z: 14.7, name: 'DE', country: 'UK' },
+              { x: 64, y: 82.9, z: 31.3, name: 'CN', country: 'China' }
+          ]
+      }]
+
+  });
+*/
+  
 
     // An application can open a connection on multiple namespaces, and
     // Socket.IO will multiplex all those connections on a single
@@ -347,10 +527,35 @@ $(document).ready(function() {
     // var signal_hist = [];
     socket.on('my_response', function(msg) {
         // show a flashing banner -
+
+        // console.log(priceChart)
+        // console.log(priceChart.series)
+
+        //priceChart.setSeriesData(series2)
+        //priceChart.update({})
+        /*
+        if (typeof msg.prices_series !== 'undefined') {
+          console.log('priceChart:')
+
+          var priceSeries = JSON.parse(msg.prices_series)
+          priceChart.update({series: priceSeries}, true, true);
+          console.log(priceChart.series[0].data)
+
+          // update bubbleChart -
+          bubbleChart.update({series: bubble}, true, true);
+          console.log(bubbleChart.series[0].data)
+
+        }
+        $('#debug').text(priceChart.series);
+        */
+
+
         // $('#log').append('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
         $('#log').html(msg.signals_html);
-        $('#signals_rank').html(msg.signals_rank);
+        $('#signals_rank_long').html(msg.signals_rank_long);
+        $('#signals_rank_short').html(msg.signals_rank_short);
 
+        // update grid
         signalGrid.setTitle(msg.time)
 
         if (typeof msg.signal !== 'undefined') {
@@ -486,3 +691,20 @@ var renderCloseFn = function(o) {
   
     return o;
 };
+
+
+var series2 = [{
+  name: 'XXXXXXXXx',
+  data: [43934, 52503, 57177, 69658, 97031, 119931, 137133, 154175]
+}, {
+  name: 'ZZZZZ',
+  data: [12908, 5948, 8105, 11248, 8989, 11816, 18274, 18111]
+}];
+
+var bubble = [{
+  data: [
+    { x: 71, y: 93.2, z: 24.7, name: 'UK', country: 'United Kingdom' },
+    { x: 69.2, y: 57.6, z: 10.4, name: 'IT', country: 'Italy' },
+    { x: 68.6, y: 20, z: 16, name: 'RU', country: 'Russia' },
+  ]
+}]

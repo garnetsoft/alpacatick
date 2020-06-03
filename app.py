@@ -131,12 +131,37 @@ def initQ():
     print('IPC version: %s. Is connected: %s' % (q.protocol_version, q.is_connected()))
 
 
+def update_signals_count(signals_count_map, signals_count_dict, signals_df):
+    #### update signals_rank -- $$$ IMPL
+    for i, row in signals_df.iterrows():
+        
+        if signals_count_dict[row['sym']] == 0:
+            signals_count_dict[row['sym']] += 1
+            signals_count_map[row['sym']] = row
+        else:
+            prev = signals_count_map[row['sym']]
+            
+            if prev['qtm'] != row['qtm']:
+                signals_count_dict[row['sym']] += 1
+
+    print(f'$$$$: signals_count_dict: {signals_count_dict}')
+
+
+#### stats module 
+def rebase_series(series):
+    return (series / series.iloc[0]) * 100
+
+
 def background_thread():
     """Example of how to send server generated events to clients."""
     count = 0
     signals_hist = []
-    signals_count_dict = defaultdict(int)
-    signals_count_map = {}
+    signals_hist_df = pd.DataFrame()
+
+    long_signals_count_dict = defaultdict(int)
+    long_signals_count_map = {}
+    short_signals_count_dict = defaultdict(int)
+    short_signals_count_map = {}
 
     while True:
         #query = "0!update l2dv:open-2*dv, r2dv:open+2*dv, qtm:string qtm, atr:mx-mn  from select last qtm, n:count i, open:first price, mn:min price, mu:avg price, md:med price, mx:max price, dv:sdev price, vwap:size wavg price, close:last price, chg:last deltas price, volume:sum size by sym from trade"
@@ -152,7 +177,7 @@ def background_thread():
         # APPLY signals and send orders to Alpaca, update real-time postions
         #print(stats.dtypes)
         signal_long = stats.loc[(stats.n>=30) & (stats.close==stats.mx) & (stats.close>stats.open)].copy()
-        signal_long = stats.loc[(stats.n<1000)].copy() # testing mode
+        #signal_long = stats.loc[(stats.n<1000)].copy() # testing mode
         #, ['sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr']]
         signal_long['signal'] = 'Mom_Long'
 
@@ -161,6 +186,7 @@ def background_thread():
             print('$$$$ got mom LONG signals: (send to Alexa) ')
             #print(signal_long)
             # check if any active positions -
+            update_signals_count(long_signals_count_map, long_signals_count_dict, signal_long)
         
         signals_short = stats.loc[(stats.n>=30) & (stats.close==stats.mn) & (stats.close<stats.open)].copy()
         signals_short['signal'] = 'Mom_Short'
@@ -168,37 +194,29 @@ def background_thread():
         if len(signals_short) > 0:
             print('$$$$ got SHORT signals: (send to Alexa) ')
             #print(signals_short)
+            update_signals_count(short_signals_count_map, short_signals_count_dict, signals_short)
 
         # merge Long/Short signals -
         signals_df = pd.concat([signal_long, signals_short])
-        signals_hist_df = pd.DataFrame()
-
-        #stats['signal'] = np.where((stats.n>=30) & (stats.close==stats.mx) & (stats.close>stats.open), 'Mom_Long', '')
-        #stats['signal'] = np.where((stats.n<1000), 'Mom_Long', '')
-        #stats['signal'] = np.where((stats.n>=30) & (stats.close==stats.mn) & (stats.close<stats.open), 'Mom_Short', '')
-        #signals_df2 = stats.loc[stats.signal != '']
-        #print('HAAAAAAAAA')
-        #print(signals_df2)
-
 
         if len(signals_df) > 0:
             signals_ui = signals_df[['count', 'sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal']]
             print('xxxx signals_ui: ')
             print(signals_ui)
 
-            #### update signals_rank -- $$$ IMPL
-            for i, row in signals_df.iterrows():
+            # #### update signals_rank -- $$$ IMPL
+            # for i, row in signals_df.iterrows():
                 
-                if signals_count_dict[row['sym']] == 0:
-                    signals_count_dict[row['sym']] += 1
-                    signals_count_map[row['sym']] = row
-                else:
-                    prev = signals_count_map[row['sym']]
+            #     if signals_count_dict[row['sym']] == 0:
+            #         signals_count_dict[row['sym']] += 1
+            #         signals_count_map[row['sym']] = row
+            #     else:
+            #         prev = signals_count_map[row['sym']]
                     
-                    if prev['qtm'] != row['qtm']:
-                        signals_count_dict[row['sym']] += 1
+            #         if prev['qtm'] != row['qtm']:
+            #             signals_count_dict[row['sym']] += 1
 
-            print(f'$$$$: signals_count_dict: {signals_count_dict}')
+            # print(f'$$$$: signals_count_dict: {signals_count_dict}')
 
             signals_hist.append(signals_ui)
             # keep just the last 5 signals
@@ -219,19 +237,34 @@ def background_thread():
         #print('$$$$ signals_json')
         #print(signals_json)
 
+        # minute price series -
+        #query = '0!select data:100*price % first price by name:sym  from select last price by sym, qtm.minute from trade where sym like "XL*"'
+        #prices_df = q(query)
+        #prices_json = prices_df.to_json(orient='records')
+        #print('xxxx prices_json:')
+        #print(prices_json)
+
 
         # publish kdb upd time:
         tm = q("max exec qtm from select by sym from trade")
         print(f'count: {count}, qtime: {tm}')
 
+        long_signals_rank = sorted(long_signals_count_dict.items(), key=lambda x: x[1], reverse=True) 
+        short_signals_rank = sorted(short_signals_count_dict.items(), key=lambda x: x[1], reverse=True)
+
         socketio.emit('my_response',
-                      {'count': count,
-                      'signals_rank': str(signals_count_dict),
-                      'signals_html': signals_html,
-                      'time':str(tm).split(" ")[0],
-                      'signal': signals_json,                       
-                      'summary': stats_json,
-                      }, namespace='/test')
+                        {'count': count,
+                        'time':str(tm).split(" ")[0],
+
+                        'signals_rank_long': str(long_signals_rank),
+                        'signals_rank_short': str(short_signals_rank),
+                        'signals_html': signals_html,
+                        'signal': signals_json,                       
+                        'summary': stats_json,
+
+                        #'prices_series': prices_json,
+
+                        }, namespace='/test')
 
 
         # set update period
@@ -293,14 +326,15 @@ API_SECRET = config['secret_key']
 APCA_API_BASE_URL = "https://paper-api.alpaca.markets"
 api = tradeapi.REST(API_KEY, API_SECRET, APCA_API_BASE_URL, 'v2')
 
-get_account_info()
-
+#get_account_info()
 # send test order -
 
 
+print('xxxx connect to Kdb...')
+
 # create connection object
-q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
-#q = qconnection.QConnection(host='aq101', port=6002, pandas=True)
+#q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
+q = qconnection.QConnection(host='aq101', port=6002, pandas=True)
 
 
 #### main ####
