@@ -34,11 +34,6 @@ $(document).ready(function() {
             title: 'id',
             index: 'id',
           },            
-          {
-            type: 'text',
-            title: 'sym',
-            index: 'sym',
-          },
           //2020-05-21 19:26:13.758
           {
             type: 'text',
@@ -100,6 +95,11 @@ $(document).ready(function() {
             title: 'close',
             index: 'close',
             render: renderCloseFn,
+          },
+          {
+            type: 'text',
+            title: 'sym',
+            index: 'sym',
           },
           {
             title: 'price',

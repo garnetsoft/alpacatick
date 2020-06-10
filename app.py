@@ -21,6 +21,7 @@ import alpaca_trade_api as tradeapi
 import threading
 import time
 import datetime
+from datetime import datetime
 from threading import Lock
 
 
@@ -147,9 +148,28 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df):
     print(f'$$$$: signals_count_dict: {signals_count_dict}')
 
 
+def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
+    #### update signals_rank -- $$$ IMPL
+    for i, row in signals_df.iterrows():
+        
+        sym = row['sym']
+        signal = row['signal']
+        removed = signals_count_map.pop(sym, None)
+        if removed is not None:
+            signals_count_dict.pop(sym)
+            print(f'XXXX: {datetime.now()} GOT {sym} {signal} signal, removed it from opposite signal map. ')
+
+
 #### stats module 
 def rebase_series(series):
     return (series / series.iloc[0]) * 100
+
+
+# global cache to prevent reset from broswer refresh
+long_signals_count_dict = defaultdict(int)
+long_signals_count_map = {}
+short_signals_count_dict = defaultdict(int)
+short_signals_count_map = {}
 
 
 def background_thread():
@@ -158,10 +178,6 @@ def background_thread():
     signals_hist = []
     signals_hist_df = pd.DataFrame()
 
-    long_signals_count_dict = defaultdict(int)
-    long_signals_count_map = {}
-    short_signals_count_dict = defaultdict(int)
-    short_signals_count_map = {}
 
     while True:
         #query = "0!update l2dv:open-2*dv, r2dv:open+2*dv, qtm:string qtm, atr:mx-mn  from select last qtm, n:count i, open:first price, mn:min price, mu:avg price, md:med price, mx:max price, dv:sdev price, vwap:size wavg price, close:last price, chg:last deltas price, volume:sum size by sym from trade"
@@ -187,6 +203,7 @@ def background_thread():
             #print(signal_long)
             # check if any active positions -
             update_signals_count(long_signals_count_map, long_signals_count_dict, signal_long)
+            remove_signals_count(short_signals_count_map, short_signals_count_dict, signal_long)
         
         signals_short = stats.loc[(stats.n>=30) & (stats.close==stats.mn) & (stats.close<stats.open)].copy()
         signals_short['signal'] = 'Mom_Short'
@@ -195,6 +212,7 @@ def background_thread():
             print('$$$$ got SHORT signals: (send to Alexa) ')
             #print(signals_short)
             update_signals_count(short_signals_count_map, short_signals_count_dict, signals_short)
+            remove_signals_count(long_signals_count_map, long_signals_count_dict, signals_short)
 
         # merge Long/Short signals -
         signals_df = pd.concat([signal_long, signals_short])
@@ -334,7 +352,8 @@ print('xxxx connect to Kdb...')
 
 # create connection object
 #q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
-q = qconnection.QConnection(host='aq101', port=6002, pandas=True)
+# impl reconnect -
+q = qconnection.QConnection(host='aq101', port=6001, pandas=True)
 
 
 #### main ####
