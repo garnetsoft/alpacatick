@@ -67,7 +67,7 @@ def on_error(ws, error):
 
     wss_status['data']['callback'] = status
     queue.put(wss_status)
-    sys.exit(-1)
+    #sys.exit(-1)
 
 
 def on_close(ws):
@@ -169,10 +169,13 @@ if __name__ == "__main__":
         kt = KdbThread(config, queue)
         kt.start()
 
-        websocket.enableTrace(False)
+        wss_url =config.get("wss_url", "wss://data.alpaca.markets/stream")
+        print(f'xxxx connecting to {wss_url} ...')
+
+        websocket.enableTrace(True)
         ws = websocket.WebSocketApp(#"ws://echo.websocket.org/",
             #"https://data.alpaca.markets/v1",
-            "wss://data.alpaca.markets/stream",
+            config.get("wss_url", "wss://data.alpaca.markets/stream"),
             on_message = on_message,
             on_error = on_error,
             on_close = on_close)
