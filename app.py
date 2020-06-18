@@ -144,6 +144,7 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df):
             
             if prev['qtm'] != row['qtm']:
                 signals_count_dict[row['sym']] += 1
+                signals_count_map[row['sym']] = row
 
     print(f'$$$$: signals_count_dict: {signals_count_dict}')
 
