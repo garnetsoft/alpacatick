@@ -12,7 +12,7 @@ from threading import Thread
 from queue import Queue
 import configparser
 import time
-
+import traceback
 
 import websocket
 try:
@@ -167,10 +167,14 @@ if __name__ == "__main__":
         kt = KdbThread(config, queue)
         kt.start()
 
+        wss_url =config.get("wss_url", "wss://data.alpaca.markets/stream")
+        print(f'xxxx connecting to {wss_url} ...')
+
         websocket.enableTrace(True)
         ws = websocket.WebSocketApp(#"ws://echo.websocket.org/",
             #"https://data.alpaca.markets/v1",
-            "wss://data.alpaca.markets/stream",
+            #"wss://data.alpaca.markets/stream",
+            wss_url,
             on_message = on_message,
             on_error = on_error,
             on_close = on_close)

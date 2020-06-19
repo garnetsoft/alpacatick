@@ -12,7 +12,7 @@ from threading import Thread
 from queue import Queue
 import configparser
 import time
-
+import traceback
 
 from qpython import qconnection
 from qpython.qcollection import qlist
@@ -130,15 +130,17 @@ class KdbThread(Thread):
             tape_list = []
             
             for message in messages:
-                msg_json = json.loads(message)
-                stream = msg_json.get('stream')
+                msg_json = json.loads(message)                
                 data = msg_json['data']
-
-                stream_list.append(stream)
                 data_list.append(str(data))
 
-                #if data.get('ev') == None:
-                #    continue
+                stream = msg_json.get('stream', None)
+                if stream:
+                    stream_list.append(stream)
+
+                evt = data.get('ev', None)
+                if evt is None:
+                    continue
 
                 # get trade field from data
                 # ['ev', 'T', 'i', 'x', 'p', 's', 't', 'c', 'z']                
@@ -164,6 +166,7 @@ class KdbThread(Thread):
 
         except Exception as e:
             print(f'Exception: {self.config["stream"]} processing to Kdb error: {e}, data: {messages}, {datetime.now()}')
+            traceback.print_exc(file=sys.stdout)
 
 
     def process_quotes(self, messages):
@@ -220,6 +223,7 @@ class KdbThread(Thread):
 
         except Exception as e:
             print(f'Exception: {self.config["stream"]} processing to Kdb error: {e}, data: {messages}, {datetime.now()}')
+            traceback.print_exc(file=sys.stdout)
 
 
     def run(self):
