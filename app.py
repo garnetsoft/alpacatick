@@ -57,10 +57,16 @@ def load_app_config(config_file):
         raise Exception('Error init/start Services. %s' %e)
 
 
+def initQ():
+    # initialize connection
+    q.open()
+
+    print(q)
+    print('IPC version: %s. Is connected: %s' % (q.protocol_version, q.is_connected()))
+
 
 ### position management ###
 
-pos = {}
 acct_balance = []
 
 
@@ -76,6 +82,24 @@ def get_account_info():
     positions = api.list_positions()
     for position in positions:
         print(f'$$$$ pos: {position}')
+
+
+def get_live_positions():
+    pos_list = []
+
+    positions = api.list_positions()
+    if len(positions) == 0:
+        print(f'xxxx no positions')
+    else:
+        for pos in positions:
+            print(f'$$$$ pos: {pos.symbol}, qty: {pos.qty},  market_value: {pos.market_value}, unrealized_pnl: {pos.unrealized_pl}, side: {pos.side}, \
+                avg_entry_price:{pos.avg_entry_price}, current_price: {pos.current_price}' )
+
+            pos_list.append([pos.symbol, pos.qty, pos.market_value, pos.unrealized_pl, pos.side, pos.avg_entry_price, pos.current_price])
+
+    pos_df = pd.DataFrame(pos_list, columns=['symbol', 'qty', 'market_value', 'unrealized_pn', 'side', 'avg_entry_price', 'current_price'])
+
+    return pos_df
 
 
 # Submit an order if quantity is above 0.
@@ -94,6 +118,9 @@ def submitOrder(qty, stock, side, resp):
 
 
 def send_basic_order(api, sym, qty, side):
+    if isinstance(sym, bytes):
+        sym = sym.decode('utf-8')
+
     qty = int(qty)
     if(qty == 0):
         return
@@ -120,7 +147,7 @@ def send_basic_order(api, sym, qty, side):
             api.submit_order(sym, abs(qty), side, "market", "gtc")
 
         print(f"Order of | {abs(qty) + abs(q2)} {sym} {side} | submitted.")
-        pos[sym] = [datetime.now(), sym, qty, side, "market", "gtc"]
+        #pos[sym] = [datetime.now(), sym, qty, side, "market", "gtc"]
         
         return True
     except Exception as e:
@@ -129,64 +156,22 @@ def send_basic_order(api, sym, qty, side):
         return False
 
 
-def initQ():
-    # initialize connection
-    q.open()
+def send_entry_order(sym, size, side):
+    if isinstance(sym, bytes):
+        sym = sym.decode('utf-8')
 
-    print(q)
-    print('IPC version: %s. Is connected: %s' % (q.protocol_version, q.is_connected()))
-
-
-def update_signals_count(signals_count_map, signals_count_dict, signals_df, long_short):
-    #### update signals_rank -- $$$ IMPL
-    for i, row in signals_df.iterrows():
-        
-        if signals_count_dict[row['sym']] == 0:
-            signals_count_dict[row['sym']] += 1
-            signals_count_map[row['sym']] = row
-        else:
-            prev = signals_count_map[row['sym']]
-            
-            if prev['qtm'] != row['qtm']:
-                signals_count_dict[row['sym']] += 1
-                signals_count_map[row['sym']] = row  # update to the latest signal details -
+    status = send_basic_order(api, sym, size, side)
+    print(f'$$$$ entry order: {sym}, {side}, {size} executed. status: {status}')
+    return None
 
 
-                ## submit order to broker if signals_count_dict >=10
-                if signals_count_dict[row['sym']] == 5:  # only sent once
-                    if len(orders_hist) > int(config['orders_threshold']):
-                        print(f'KKKK daily orders_threshold reached, not sending order for signal: {row}')
+def send_exit_order(sym, size, side):
+    if isinstance(sym, bytes):
+        sym = sym.decode('utf-8')
 
-                    elif pos.get(row['sym'], None) is not None:
-                        print(f'FFFF already has position for signal: {row}')
-
-                    elif long_short > 0:
-                        print(f'$$$$ sending order for signal: {row}')
-                        status = send_basic_order(api, row['sym'].decode('utf-8'), 1, 'buy')
-                        print(f"$$$$ sent order for signal: {row['sym']}, status: {status}")
-
-                        pos[row.name] = row
-                        #orders_hist.append(row.to_dict('records'))
-                        orders_hist.append([datetime.now(), row['sym'].decode('utf-8'), 1, 'buy', 'mkt', row['close'], row['qtm']])
-                    else:
-                        #send_basic_order(api, row['sym'], 1, 'sell')
-                        print(f'XXXX system does not support SHORT SELL orders, skip signal: {row}')                
-                        #pos[row.name] = row
-                        #orders_hist.append(row)
-
-
-    print(f'$$$$: signals_count_dict: {signals_count_dict}')
-
-
-def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
-    #### update signals_rank -- $$$ IMPL
-    for i, row in signals_df.iterrows():
-        sym = row['sym']
-
-        removed = signals_count_map.pop(sym, None)
-        if removed is not None:
-            signals_count_dict.pop(sym)
-            print(f'XXXX removed sig {sym} from opposite signals map.')
+    status = send_basic_order(api, sym, size, side)
+    print(f'$$$$ exit order: {sym}, {side}, {size} executed. status: {status}')
+    return None
 
 
 
@@ -194,49 +179,6 @@ def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
 def rebase_series(series):
     return (series / series.iloc[0]) * 100
 
-
-### global signal map - so it doesn't get overwritten when browser refreshes ###
-## IMPL
-long_signals_count_dict = defaultdict(int)
-long_signals_count_map = {}
-short_signals_count_dict = defaultdict(int)
-short_signals_count_map = {}
-
-# track all signals that result into orders -
-orders_hist = []
-orders_hist_df = pd.DataFrame()
-
-# track every position's pnl
-acct_pnl = {}
-
-
-def create_long_short_signals(stats):
-    # APPLY signals and send orders to Alpaca, update real-time postions
-    signal_long = stats.loc[(stats.n>=30) & (stats.close==stats.mx) & (stats.close>stats.open)].copy()
-    signal_long['signal'] = 'Mom_Long'
-
-    # send to order event queue -
-    if len(signal_long) > 0:
-        print('$$$$ got mom LONG signals: (send to Alexa) ')
-        #print(signal_long)
-        # check if any active positions -
-        update_signals_count(long_signals_count_map, long_signals_count_dict, signal_long, 1)
-        remove_signals_count(short_signals_count_map, short_signals_count_dict, signal_long)
-
-
-    signals_short = stats.loc[(stats.n>=30) & (stats.close==stats.mn) & (stats.close<stats.open)].copy()
-    signals_short['signal'] = 'Mom_Short'
-
-    if len(signals_short) > 0:
-        print('$$$$ got SHORT signals: (send to Alexa) ')
-        #print(signals_short)
-        update_signals_count(short_signals_count_map, short_signals_count_dict, signals_short, -1)
-        remove_signals_count(long_signals_count_map, long_signals_count_dict, signals_short)
-
-
-    # merge Long/Short signals -
-    #signals_df = pd.concat([signal_long, signals_short])
-    return pd.concat([signal_long, signals_short])
 
 
 ### app routes -
@@ -535,6 +477,177 @@ def get_pnl_update():
     return {'error:': '(api) account is not available.'}
 
 
+
+### global signal map - so it doesn't get overwritten when browser refreshes ###
+## IMPL
+long_signals_count_dict = defaultdict(int)
+long_signals_count_map = {}
+short_signals_count_dict = defaultdict(int)
+short_signals_count_map = {}
+
+# track all signals that result into orders -
+orders_hist = []
+orders_hist_df = pd.DataFrame()
+
+# track every position's pnl
+acct_pnl = {}
+pos = {}
+
+
+def update_signals_count(signals_count_map, signals_count_dict, signals_df, long_or_short):
+    #### update signals_rank -- $$$ IMPL
+    
+    for i, row in signals_df.iterrows():
+        sym = row['sym']
+        if isinstance(sym, bytes):
+            sym = sym.decode('utf-8')
+
+        if signals_count_dict[sym] == 0:
+            signals_count_dict[sym] += 1
+            signals_count_map[sym] = row
+        else:
+            prev = signals_count_map[sym]
+            
+            if prev['qtm'] != row['qtm']:
+                signals_count_dict[sym] += 1
+                signals_count_map[sym] = row  # update to the latest signal details -
+
+
+                if signals_count_dict[sym] == 5:  # only sent entry order once
+
+                    #if len(orders_hist) > int(config['orders_threshold']):
+                    if len(pos) >= int(config['orders_threshold']):
+                        print(f'KKKK daily orders_threshold reached, not sending order for signal: {sym}')
+
+                    elif pos.get(sym, None) is not None:
+                        print(f'FFFF already has position for signal: {sym}')
+
+                    elif long_or_short > 0:
+                        print(f'$$$$ sending Buy (entry) order for signal: {sym}')
+
+                        #if config.get('enable_trading', False) == 'True':
+                        status = send_basic_order(api, sym, init_order_size, 'buy')
+                        print(f"$$$$ sent order for signal: {sym}, status: {status}")
+
+                        #orders_hist.append(row.to_dict('records'))
+                        pos[sym] = row
+                        orders_hist.append([datetime.now(), sym, init_order_size, 'buy', 'ENTRY', row['close'], row['qtm']])
+
+                    elif long_or_short < 0:
+                        print(f'XXXX system does not support SHORT SELL orders, skip signal: {sym}')
+
+                        """
+                        if pos.get(row['sym'], None) is not None:
+                            print(f'$$$$ sending Sell (exit) order for signal: {row}')
+                            #send_basic_order(api, row['sym'], init_order_size, 'sell')
+                            send_exit_order(row['sym'].decode('utf-8'), init_order_size, 'sell')
+                            del pos[row['sym']]
+
+                            orders_hist.append([datetime.now(), row['sym'].decode('utf-8'), init_order_size, 'sell', 'mkt', row['close'], row['qtm']])
+                        else:
+                            print(f'XXXX system does not support SHORT SELL orders, skip signal: {row}')
+                        """
+
+                    else:
+                        print(f'XXXX Unkown state, skip signal: {row}')
+
+
+                # exit for profit
+                elif signals_count_dict[sym] > 9:
+                    if not bool(config.get('enable_trading', False)):
+                        pass
+                    elif pos.get(sym, None) is None:
+                        pass
+                    else:
+
+                        if signals_count_dict[sym] == 10:
+                            # taking profit on existing order - do 1/2, 1/4, 1/4 method?
+                            send_exit_order(sym, init_order_size/2, 'sell')
+                            print('$$$$ exiting 1/2 profitable position0: sell {init_order_size/2} {sym}')
+                            orders_hist.append([datetime.now(), sym, init_order_size/2, 'sell', 'TAKE_PROFIT1', row['close'], row['qtm']])
+
+                        elif signals_count_dict[sym] == 15:
+                            # taking profit on existing order - do 1/2, 1/4, 1/4 method?
+                            send_exit_order(sym, init_order_size/4, 'sell')
+                            print('$$$$ exiting 1/2 profitable position1: sell {init_order_size/4} {sym}')
+                            orders_hist.append([datetime.now(), sym, init_order_size/4, 'sell', 'TAKE_PROFIT2', row['close'], row['qtm']])
+
+                        elif signals_count_dict[sym] == 20:
+                            # taking profit on existing order - do 1/2, 1/4, 1/4 method?
+                            send_exit_order(sym, init_order_size/4, 'sell')
+                            print('$$$$ exiting 1/2 profitable position2: sell {init_order_size/4} {sym}')
+                            orders_hist.append([datetime.now(), sym, init_order_size/4, 'sell', 'TAKE_PROFIT3', row['close'], row['qtm']])
+
+                            del pos[sym]
+
+                            ## start over - reset cache so we can trade this again if momentum builds up
+                            removed = signals_count_map.pop(sym, None)
+                            if removed is not None:
+                                signals_count_dict.pop(sym)
+                                print(f'AAAA removed signal {sym} from cache so it can be traded again $$$.')
+
+
+    print(f'$$$$: signals_count_dict: {signals_count_dict}')
+
+
+def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
+    #### remove signal from opposite map if trend reverse -- $$$$ IMPL
+    # exit_at_loss  - for long positions, going down to low of the day
+    #               - for short positions, going up to high of the day
+
+    for i, row in signals_df.iterrows():
+        sym = row['sym']
+        if isinstance(sym, bytes):
+            sym = sym.decode('utf-8')
+
+        removed = signals_count_map.pop(sym, None)
+        if removed is not None:
+            signals_count_dict.pop(sym)
+            print(f'XXXX removed sig {sym} from opposite signals map.')
+
+            ### NEED TO EXIT ACTIVE POSTION COMPLETELY $$$
+            if pos.get(row['sym'], None) is not None:
+                print(f'$$$$ sending Sell (exit) order for signal: {sym}')
+                #send_basic_order(api, row['sym'], init_order_size, 'sell')
+                send_exit_order(sym, init_order_size, 'sell')
+                del pos[sym]
+
+                orders_hist.append([datetime.now(), sym, init_order_size, 'sell', 'STOP_LOSS', row['close'], row['qtm']])
+
+
+
+def create_long_short_signals(stats):
+    # APPLY signals and send orders to Alpaca, update real-time postions
+    signal_long = stats.loc[(stats.n>=30) & (stats.close==stats.mx) & (stats.close>stats.open)].copy()
+    signal_long['signal'] = 'Mom_Long'
+
+    # send to order event queue -
+    if len(signal_long) > 0:
+        print('$$$$ got mom LONG signals: (send to Alexa) ')
+        #print(signal_long)
+        # check if any active positions -
+        update_signals_count(long_signals_count_map, long_signals_count_dict, signal_long, 1)
+        remove_signals_count(short_signals_count_map, short_signals_count_dict, signal_long)
+
+
+    signals_short = stats.loc[(stats.n>=30) & (stats.close==stats.mn) & (stats.close<stats.open)].copy()
+    signals_short['signal'] = 'Mom_Short'
+
+    if len(signals_short) > 0:
+        print('$$$$ got SHORT signals: (send to Alexa) ')
+        #print(signals_short)
+        update_signals_count(short_signals_count_map, short_signals_count_dict, signals_short, -1)
+        remove_signals_count(long_signals_count_map, long_signals_count_dict, signals_short)
+
+
+    ## print any live pos - 
+    print(f'$$$$ create_long_short_signals, position count: {len(pos)}, active positions: {pos.keys()}')
+
+    # merge Long/Short signals -
+    #signals_df = pd.concat([signal_long, signals_short])
+    return pd.concat([signal_long, signals_short])
+
+
 def background_thread():
     """Example of how to send server generated events to clients."""
     count = 0
@@ -543,6 +656,8 @@ def background_thread():
 
     try:
         while True:
+            print(f'################################# background thread running {datetime.now()} ###############')
+
             stats = q("get_summary2[]")
             stats['count'] = count
 
@@ -592,7 +707,7 @@ def background_thread():
             orders_hist_html = f"<div>Daily order count: {len(orders_hist)}</div>"
             if len(orders_hist) > 0:
                 #orders_hist_df = pd.concat(orders_hist)
-                orders_hist_df = pd.DataFrame(orders_hist, columns=['order_time', 'symbol', 'size', 'side', 'ord_type', 'entry_price', 'signal_time'])
+                orders_hist_df = pd.DataFrame(orders_hist, columns=['order_time', 'symbol', 'size', 'side', 'ord_type', 'ref_price', 'signal_time'])
                 print(orders_hist_html)
                 print(orders_hist_df)
                 # send to html
@@ -646,6 +761,8 @@ def background_thread():
             print(f'count: {count}, qtime: {tm}')
 
             ### send alert to UI when delay is over 1m - IMPL
+            live_positions_df = get_live_positions()
+            live_positions_html = live_positions_df.to_html(classes="table table-hover table-bordered table-striped",header=True)
 
 
             long_signals_rank = sorted(long_signals_count_dict.items(), key=lambda x: x[1], reverse=True) 
@@ -662,6 +779,7 @@ def background_thread():
                             'signals_rank_short': str(short_signals_rank),
                             'signals_html': signals_html,
                             'orders_hist_html': orders_hist_html,
+                            'live_positions_html': live_positions_html,
 
                             'signal': signals_json,                       
                             'summary': stats_json,
@@ -671,9 +789,13 @@ def background_thread():
 
                             }, namespace='/test2')
 
+            print(f'XXXXXXXXXXXXXXXXXXXXXXXXxxxxxxxxxxxxxxxxxxxxxxxxxxxxx DONE. {datetime.now()} xxxxxxxxxxxxxx')
+            print('\n')
+
             # set update period
             socketio.sleep(13)
             count += 1
+
 
         # end while
 
@@ -701,7 +823,17 @@ print('xxxx connect to Kdb...')
 #q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
 q = qconnection.QConnection(host='aq101', port=6001, pandas=True)
 
+print('XXXXXXXX enable_trading?? ', config.get('enable_trading'))
+if config.get('enable_trading', False) == 'True':
+    print('$$$$ enabled_trading=True')
+else:
+    print('XXXX enabled_trading=False')
+
+
+## order_entry_size
+init_order_size = int(config.get('init_order_size', 4))
+
 
 #### main ####
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=False)

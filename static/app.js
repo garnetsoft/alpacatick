@@ -171,6 +171,20 @@ $(document).ready(function() {
                             console.log(pnlseries)
 
                             series[i].setData(pnlseries)
+
+                            // save init pnl -
+                            if (mdata.length == 0) {
+                              mdata.push(data[i].pnl)
+                            }
+                          }
+
+                          if (mdata.length > 0) {
+                            console.log('xxxx: mdata: ' + mdata)
+                            init_series = data_series['AAPL']
+                            init_series.push([(new Date()).getTime(), mdata[0][1] ])
+                            //console.log(init_series)
+
+                            series[1].setData(init_series)
                           }
 
                           // data.forEach(function(o) {
@@ -272,11 +286,11 @@ $(document).ready(function() {
     series: [
       {
         name: 'XXX',
-        data: [[(new Date()).getTime(), 20000.09]]
+        data: [[(new Date()).getTime(), 50000.09]]
       },
       {
         name: 'AAPL',
-        data: [[(new Date()).getTime(), 20000.01]]
+        data: [[(new Date()).getTime(), 50000.01]]
       },    
     ]
 
@@ -1009,7 +1023,8 @@ $(document).ready(function() {
       $('#signals_rank_long').html(msg.signals_rank_long);
       $('#signals_rank_short').html(msg.signals_rank_short);
 
-      $('#orders_hist_html').html(msg.orders_hist_html);
+      $('#orders_hist_html').html(msg.orders_hist_html);      
+      $('#live_positions_html').html(msg.live_positions_html);
 
       // update grid
       signalGrid.setTitle(msg.time)
