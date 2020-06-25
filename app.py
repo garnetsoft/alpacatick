@@ -80,22 +80,29 @@ def get_account_info():
         print(f'xxxx ord: {order}')
 
     positions = api.list_positions()
-    for position in positions:
-        print(f'$$$$ pos: {position}')
+    notional = 0.0
+    for i, position in enumerate(positions):
+        print(f'$$$$ {i} pos: {position}')
+        notional += position.market_value
+    print(f'$$$$ total USD: {notional}')
 
 
 def get_live_positions():
     pos_list = []
 
     positions = api.list_positions()
+    notional = 0.0
     if len(positions) == 0:
         print(f'xxxx no positions')
     else:
-        for pos in positions:
-            print(f'$$$$ pos: {pos.symbol}, qty: {pos.qty},  market_value: {pos.market_value}, unrealized_pnl: {pos.unrealized_pl}, side: {pos.side}, \
+        for i, pos in enumerate(positions):
+            print(f'$$$$ {i} pos: {pos.symbol}, qty: {pos.qty},  market_value: {pos.market_value}, unrealized_pnl: {pos.unrealized_pl}, side: {pos.side}, \
                 avg_entry_price:{pos.avg_entry_price}, current_price: {pos.current_price}' )
 
             pos_list.append([pos.symbol, pos.qty, pos.market_value, pos.unrealized_pl, pos.side, pos.avg_entry_price, pos.current_price])
+            notional += pos.market_value
+
+        print(f'$$$$ total USD: {notional}')
 
     pos_df = pd.DataFrame(pos_list, columns=['symbol', 'qty', 'market_value', 'unrealized_pn', 'side', 'avg_entry_price', 'current_price'])
 
@@ -653,6 +660,8 @@ def background_thread():
     count = 0
     signals_hist = []
     signals_hist_df = pd.DataFrame()
+    # track order hist change
+    orders_hist_len = 0
 
     try:
         while True:
@@ -705,11 +714,19 @@ def background_thread():
 
             # orders_hist_df
             orders_hist_html = f"<div>Daily order count: {len(orders_hist)}</div>"
+            print(orders_hist_html)            
+            
             if len(orders_hist) > 0:
                 #orders_hist_df = pd.concat(orders_hist)
                 orders_hist_df = pd.DataFrame(orders_hist, columns=['order_time', 'symbol', 'size', 'side', 'ord_type', 'ref_price', 'signal_time'])
-                print(orders_hist_html)
-                print(orders_hist_df)
+                #print(orders_hist_df)
+                
+                ## save to file
+                if orders_hist_len < len(orders_hist_df):
+                    orders_hist_df.tocsv('/tmp/alpaca_paperlive_{}.csv'.format(datetime.today().date().strftime('%m/%d/%Y')))
+                    orders_hist_len = len(orders_hist_df)
+                    print(orders_hist_df)
+
                 # send to html
                 orders_hist_html += orders_hist_df.to_html(classes="table table-hover table-bordered table-striped",header=True)
                 #print(orders_hist_html)
