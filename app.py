@@ -236,14 +236,14 @@ def get_sector_bar():
 
     if not q.is_connected():
         return {'error:': 'not connected to kdb'}
+
+    s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
+    query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'        
+    print(f'xxxx get_sector_bar query: {query}')
     
-    try:
-        s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
-        query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'        
-        print(f'xxxx get_sector_bar query: {query}')
-        
-        td = datetime.today().date().strftime('%m/%d/%Y')
-        
+    td = datetime.today().date().strftime('%m/%d/%Y')
+
+    try:        
         df = q(query)
         df = rebase_series(df.dropna())
         data_json = [{"name": s, "data": list(map(list, zip([int(pd.to_datetime(datetime.strptime("{} {}".format(td, str(x)[-8:]), '%m/%d/%Y %H:%M:%S')).value / 1000000) for x in mdata.index], mdata))) } for s, mdata in df.items()]
@@ -252,10 +252,10 @@ def get_sector_bar():
         return {'msg_type': 'minute_bar', 'minute_data': json.dumps(data_json) }
 
     except Exception as e:
-        print(f'ERROR: in querying Kdb minutebar, {e}')
+        print(f'ERROR: in querying Kdb get_sector_bar, {e}, query: {query}')
         traceback.print_exc(file=sys.stdout)
 
-    return {'error:': 'kdb data not available.'}
+    return {'error:': 'kdb data not available.', 'query': query}
 
 
 @app.route('/sectorstats')
@@ -265,13 +265,13 @@ def compute_sector_stats():
     if not q.is_connected():
         return {'error:': 'not connected to kdb'}
     
-    try:
-        s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
-        query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'
-        #query = f'exec ({s})#sym!price by tm:qtm from 0!select price:last lastSalePrice by sym:symbol, qtm:lastUpdatedz.minute from iextops where symbol in {s}'
+    s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
+    query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'
+    #query = f'exec ({s})#sym!price by tm:qtm from 0!select price:last lastSalePrice by sym:symbol, qtm:lastUpdatedz.minute from iextops where symbol in {s}'
 
-        print(f'xxxx compute_sector_stats query: {query}')
-        
+    print(f'xxxx compute_sector_stats query: {query}')
+
+    try:        
         df = q(query)
         #df = rebase_series(df.bfill()).dropna()
         df = rebase_series(df.bfill().ffill())
@@ -297,10 +297,10 @@ def compute_sector_stats():
         return {'msg_type': 'stats_data', 'stats_data': json.dumps(stats_series) }
 
     except Exception as e:
-        print(f'ERROR: in querying Kdb stats_data, {e}')
+        print(f'ERROR: in querying Kdb compute_sector_stats, {e}, query: {query}')
         traceback.print_exc(file=sys.stdout)
 
-    return {'error:': 'kdb data not available.'}
+    return {'error:': 'kdb data not available.', 'query': query}
 
 
 @app.route('/statsbar2')
@@ -347,10 +347,10 @@ def compute_minute_stats2():
         return {'msg_type': 'stats_data', 'stats_data': json.dumps(stats_series) }
 
     except Exception as e:
-        print(f'ERROR: in querying Kdb stats_data, {e}')
+        print(f'ERROR: in querying Kdb compute_minute_stats2, {e}, query: {query}')
         traceback.print_exc(file=sys.stdout)
 
-    return {'error:': 'kdb data not available.'}
+    return {'error:': 'kdb data not available.', 'query': query}
 
 
 ## ajax callback to provide minute bar data
@@ -367,16 +367,15 @@ def get_minute_bar():
     
     s = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
     print(f'xxxx querying minutebar: {s}')
+    td = datetime.today().date().strftime('%m/%d/%Y')
+    #dt2 = datetime.strptime("{} {}".format(td, str(tm)[-8:]), "%m/%d/%Y %H:%M:%S")
+
+    #query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'
+    #query = f'select by 30 xbar tm:tm.minute from  exec {s}#sym!close by tm:"T"$minute from intraday where sym in {s}'
+    query = f'exec ({s})#sym!price by tm:qtm from 0!select price:last lastSalePrice by sym:symbol, qtm:lastSaleTimez.minute from iextops where  lastSaleTimez.minute>=13:30, symbol in {s}'
+    print(f'xxxx minutebar query: {query}')
 
     try:
-        td = datetime.today().date().strftime('%m/%d/%Y')
-        #dt2 = datetime.strptime("{} {}".format(td, str(tm)[-8:]), "%m/%d/%Y %H:%M:%S")
-
-        #query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'
-        #query = f'select by 30 xbar tm:tm.minute from  exec {s}#sym!close by tm:"T"$minute from intraday where sym in {s}'
-        query = f'exec ({s})#sym!price by tm:qtm from 0!select price:last lastSalePrice by sym:symbol, qtm:lastSaleTimez.minute from iextops where  lastSaleTimez.minute>=13:30, symbol in {s}'
-        print(f'xxxx minutebar query: {query}')
-
         df = q(query)
         print('xxxx minute_df:')
         #print(df.head())
@@ -393,9 +392,10 @@ def get_minute_bar():
         return {'msg_type': 'minute_bar', 'minute_data': json.dumps(data_json) }
 
     except Exception as e:
-        print(f'ERROR: in querying Kdb minutebar, {e}')
+        print(f'ERROR: in querying Kdb get_minute_bar, {e}, query: {query}')
+        traceback.print_exc(file=sys.stdout)
 
-    return {'error:': 'kdb data not available.'}
+    return {'error:': 'kdb data not available.', 'query': query}
 
 
 @app.route('/tickupdate')
