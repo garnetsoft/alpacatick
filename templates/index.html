@@ -76,11 +76,11 @@
     <h2>Command:</h2>
     <form id="emit" method="POST" action='#'>
         <input type="text" name="emit_data" id="emit_data" placeholder="Message">
-        <input type="submit" value="Echo">
+        <input type="submit" value="Setting">
     </form>
     <form id="broadcast" method="POST" action='#'>
         <input type="text" name="broadcast_data" id="broadcast_data" placeholder="Message">
-        <input type="submit" value="Broadcast">
+        <input type="submit" value="Halt">
     </form>
 
     <form id="disconnect" method="POST" action="#">
@@ -88,13 +88,16 @@
     </form>
 
     <hr>
-    <h2>Real-time chart:</h2>
-    <div id="topsChart"></div>
-
-    <hr>
+    <div id="log">log:</div>
     <h3>debug:</h3>
     <div id="debug"></div>
-    <div id="priceChart"></div>
+    <hr>
+    <div id="priceChart"></div>    
+    <!-------------------------------------------->
+
+    <hr>
+    <h2>Real-time chart:</h2>
+    <div id="topsChart"></div>
     
     <hr>
     <div class="row">
@@ -130,8 +133,6 @@
 
     <hr>
     <strong><div id="orders_hist_html"></div></strong>
-    <hr>
-    <div id="log">log:</div>
 
     <hr>
     <h2>Signals - $$$:</h2>

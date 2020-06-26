@@ -232,7 +232,7 @@ $(document).ready(function() {
     },
 
     title: {
-        text: 'PnL'
+        text: 'Live pnl'
     },
 
     accessibility: {
@@ -1014,11 +1014,11 @@ $(document).ready(function() {
         //minuteChart.update({series: minute_obj}, true, true);
       }
 
-
+      // $('#log').html(msg.signals_html);
+      // $('#log').append('<br>' + $('<div/>').text('positions allowed #' + msg.positions_allowed).html());
+      $('#log').text('positions allowed #' + msg.positions_allowed).html();
       $('#debug').text(priceChart.series);
 
-      // $('#log').html(msg.signals_html);
-      $('#log').append('<br>' + $('<div/>').text('positions allowed #' + msg.positions_allowed).html());
 
       $('#signals_rank_long').html(msg.signals_rank_long);
       $('#signals_rank_short').html(msg.signals_rank_short);

@@ -69,6 +69,15 @@ def initQ():
 
 acct_balance = []
 
+def get_today_pnl():
+    account = api.get_account()
+    print(f'HAHA: {type(account)}, {account.last_equity}, {account.equity}')
+
+    pnl = float(account.equity) - float(account.last_equity)
+    pct = 100* pnl / float(account.last_equity)
+    
+    return [pnl, pct]
+
 
 def get_account_info():
     account = api.get_account()
@@ -169,6 +178,9 @@ def send_entry_order(sym, size, side):
 
     status = send_basic_order(api, sym, size, side)
     print(f'$$$$ entry order: {sym}, {side}, {size} executed. status: {status}')
+
+    # add to order_hist -
+
     return None
 
 
@@ -178,6 +190,9 @@ def send_exit_order(sym, size, side):
 
     status = send_basic_order(api, sym, size, side)
     print(f'$$$$ exit order: {sym}, {side}, {size} executed. status: {status}')
+
+    ## - add to order_hist
+
     return None
 
 
@@ -206,6 +221,38 @@ def get_position_info(sym):
     return None
 
 
+def clear_residual_positions():
+    positions = api.list_positions()
+    
+    for position in positions:
+        qty = abs(int(float(position.qty)))
+
+        if qty == int(init_order_size / 4):
+            if(position.side == 'long'):
+                orderSide = 'sell'
+            else:
+                orderSide = 'buy'
+
+        respSO = []
+        tSubmitOrder = threading.Thread(target=submitOrder(qty, position.symbol, orderSide, respSO))
+        tSubmitOrder.start()
+        tSubmitOrder.join()
+
+        ## also need to clear positions from pos, add to order_hist as well
+
+
+    return respSO
+
+
+def close_all_positions():
+    try:
+        api.close_all_positions()
+        print("All postions closed.")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+
+
 #### stats module 
 def rebase_series(series):
     return (series / series.iloc[0]) * 100
@@ -218,16 +265,27 @@ def index():
     return render_template('index.html', async_mode=socketio.async_mode)
 
 
+### update global config - insert key/value pair
 @socketio.on('my_event', namespace='/test2')
 def test_message(message):
     session['receive_count'] = session.get('receive_count', 0) + 1
+
+    print(f'xxxx CONFIG: {message}')
+    #clear_residual_positions()
+
     emit('my_response',
          {'data': message['data'], 'count': session['receive_count']})
 
 
+### CLOSE ALL POSITIONS $$$
 @socketio.on('my_broadcast_event', namespace='/test2')
 def test_broadcast_message(message):
     session['receive_count'] = session.get('receive_count', 0) + 1
+
+    print(f'xxxx HALT: {message}')
+    # keyword from UI -
+    #close_all_positions()
+
     emit('my_response',
          {'data': message['data'], 'count': session['receive_count']},
          broadcast=True)
@@ -539,7 +597,7 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
         else:
             prev = signals_count_map[sym]
             
-            if prev['qtm'] != row['qtm']:
+            if (prev['qtm'] != row['qtm']) and (prev['close'] != row['close']):
                 signals_count_dict[sym] += 1
                 signals_count_map[sym] = row  # update to the latest signal details -
 
@@ -549,6 +607,10 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
                     #if len(orders_hist) > int(config['orders_threshold']):
                     if len(pos) >= int(config['orders_threshold']):
                         print(f'KKKK daily orders_threshold reached, not sending order for signal: {sym}')
+
+                        ### maybe we should clear out the positions with 1/4 pct of size left to give rooms to new opportunities ??
+                        # clear_residual_positions()
+
 
                     elif pos.get(sym, None) is not None:
                         print(f'FFFF already has position for signal: {sym}')
@@ -597,13 +659,13 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
                         elif signals_count_dict[sym] == 15:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
                             send_exit_order(sym, init_order_size/4, side)
-                            print('$$$$ exiting 1/2 profitable position1: sell {init_order_size/4} {sym}')
+                            print('$$$$ exiting 1/4 profitable position1: sell {init_order_size/4} {sym}')
                             orders_hist.append([datetime.now(), sym, init_order_size/4, side, 'TAKE_PROFIT2', row['close'], row['qtm']])
 
                         elif signals_count_dict[sym] == 20:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
                             send_exit_order(sym, init_order_size/4, side)
-                            print('$$$$ exiting 1/2 profitable position2: sell {init_order_size/4} {sym}')
+                            print('$$$$ exiting 1/4 profitable position2: sell {init_order_size/4} {sym}')
                             orders_hist.append([datetime.now(), sym, init_order_size/4, side, 'TAKE_PROFIT3', row['close'], row['qtm']])
 
                             del pos[sym]
@@ -701,6 +763,16 @@ def background_thread():
         while True:
             print(f'################################# background thread running {datetime.now()} ###############')
 
+            # set update period
+            socketio.sleep(13)
+            count += 1
+
+            # stop trading 8 minutes before CLOSE -
+            cur_time = datetime.now()
+            cur_hr, cur_mm = cur_time.hour, cur_time.minute
+            print(f'XXXX DEBUG: TIME: {cur_hr}, {cur_mm}')
+
+
             stats = q("get_summary2[]")
             stats['count'] = count
 
@@ -713,7 +785,12 @@ def background_thread():
             #print(stats_html)
 
             # merge Long/Short signals -
-            signals_df = create_long_short_signals(stats)
+            signals_df = pd.DataFrame()
+            if ((cur_hr == 15) and (cur_mm >= 52)) or (cur_hr >= 16):
+                pnl_info = get_today_pnl()
+                print(f'HAHA: {datetime.now()} - done for the day. today_pnl: {pnl_info}')
+            else:
+                signals_df = create_long_short_signals(stats)
 
             if len(signals_df) > 0:
                 signals_ui = signals_df[['count', 'sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal']]
@@ -823,6 +900,8 @@ def background_thread():
             print(f'$$$$$$$$ SSSSSSSSSSSSSSSSSSS sending wss updates {datetime.now()}')
             positions_allowed = config.get('orders_threshold', 11)
 
+
+
             socketio.emit('my_response',
                             {'count': count,
                             #'time':str(tm).split(" ")[0],
@@ -846,11 +925,6 @@ def background_thread():
 
             print(f'XXXXXXXXXXXXXXXXXXXXXXXXxxxxxxxxxxxxxxxxxxxxxxxxxxxxx DONE. {datetime.now()} xxxxxxxxxxxxxx')
             print('\n')
-
-            # set update period
-            socketio.sleep(13)
-            count += 1
-
 
         # end while
 
