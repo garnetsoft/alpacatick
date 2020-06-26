@@ -821,6 +821,7 @@ def background_thread():
             print(f'XXXX LONG: {long_signals_rank}, SHORT: {short_signals_rank}')
 
             print(f'$$$$$$$$ SSSSSSSSSSSSSSSSSSS sending wss updates {datetime.now()}')
+            positions_allowed = config.get('orders_threshold', 11)
 
             socketio.emit('my_response',
                             {'count': count,
@@ -838,6 +839,8 @@ def background_thread():
 
                             'prices_series': prices_json,
                             'minute_json': json.dumps(minute_json),
+
+                            'positions_allowed': positions_allowed,
 
                             }, namespace='/test2')
 

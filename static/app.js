@@ -1017,9 +1017,9 @@ $(document).ready(function() {
 
       $('#debug').text(priceChart.series);
 
-
-      // $('#log').append('<br>' + $('<div/>').text('Received #' + msg.count + ': ' + msg.data).html());
       // $('#log').html(msg.signals_html);
+      $('#log').append('<br>' + $('<div/>').text('positions allowed #' + msg.positions_allowed).html());
+
       $('#signals_rank_long').html(msg.signals_rank_long);
       $('#signals_rank_short').html(msg.signals_rank_short);
 
