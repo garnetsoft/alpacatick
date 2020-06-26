@@ -167,8 +167,8 @@ $(document).ready(function() {
 
                             pnlseries.push(data[i].pnl)
 
-                            console.log('xxx pnl')
-                            console.log(pnlseries)
+                            //console.log('xxx pnl')
+                            //console.log(pnlseries)
 
                             series[i].setData(pnlseries)
 

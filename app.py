@@ -83,7 +83,7 @@ def get_account_info():
     notional = 0.0
     for i, position in enumerate(positions):
         print(f'$$$$ {i} pos: {position}')
-        notional += position.market_value
+        notional += float(position.market_value)
     print(f'$$$$ total USD: {notional}')
 
 
@@ -100,7 +100,7 @@ def get_live_positions():
                 avg_entry_price:{pos.avg_entry_price}, current_price: {pos.current_price}' )
 
             pos_list.append([pos.symbol, pos.qty, pos.market_value, pos.unrealized_pl, pos.side, pos.avg_entry_price, pos.current_price])
-            notional += pos.market_value
+            notional += float(pos.market_value)
 
         print(f'$$$$ total USD: {notional}')
 
@@ -723,7 +723,7 @@ def background_thread():
                 
                 ## save to file
                 if orders_hist_len < len(orders_hist_df):
-                    orders_hist_df.tocsv('/tmp/alpaca_paperlive_{}.csv'.format(datetime.today().date().strftime('%m/%d/%Y')))
+                    orders_hist_df.to_csv('/tmp/alpaca_paperlive_{}.csv'.format(datetime.today().date().strftime('%m%d%Y')))
                     orders_hist_len = len(orders_hist_df)
                     print(orders_hist_df)
 
@@ -853,4 +853,5 @@ init_order_size = int(config.get('init_order_size', 4))
 
 #### main ####
 if __name__ == '__main__':
-    socketio.run(app, debug=False)
+    #socketio.run(app, debug=False)
+    socketio.run(app, debug=False, host='0.0.0.0', port=8501)
