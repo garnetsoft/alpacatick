@@ -181,6 +181,30 @@ def send_exit_order(sym, size, side):
     return None
 
 
+def close_sym_position(sym):
+    positions = api.list_positions()
+
+    for position in positions:
+        if position.symbol == sym:
+            if(position.side == 'long'):
+                orderSide = 'sell'
+            else:
+                orderSide = 'buy'
+
+            qty = abs(int(float(position.qty)))
+
+            return send_exit_order(sym, qty, orderSide)
+
+
+def get_position_info(sym):
+    positions = api.list_positions()
+
+    for position in positions:
+        if position.symbol == sym:
+            return position
+
+    return None
+
 
 #### stats module 
 def rebase_series(series):
@@ -613,14 +637,27 @@ def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
             print(f'XXXX removed sig {sym} from opposite signals map.')
 
             ### NEED TO EXIT ACTIVE POSTION COMPLETELY $$$
-            if pos.get(row['sym'], None) is not None:
+            if pos.get(sym, None) is not None:
                 print(f'$$$$ sending Sell (exit) order for signal: {sym}')
                 #send_basic_order(api, row['sym'], init_order_size, 'sell')
-                send_exit_order(sym, init_order_size, 'sell')
-                del pos[sym]
+                #send_exit_order(sym, init_order_size, 'sell')
+                #close_sym_position(sym)
+                pos_info = get_position_info(sym)
 
-                orders_hist.append([datetime.now(), sym, init_order_size, 'sell', 'STOP_LOSS', row['close'], row['qtm']])
+                if pos_info is not None:
+                    if(pos_info.side == 'long'):
+                        orderSide = 'sell'
+                    else:
+                        orderSide = 'buy'
 
+                    qty = abs(int(float(pos_info.qty)))
+                    send_exit_order(sym, qty, orderSide)
+
+                    del pos[sym]
+
+                    orders_hist.append([datetime.now(), sym, qty, orderSide, 'STOP_LOSS', row['close'], row['qtm']])
+
+    return None
 
 
 def create_long_short_signals(stats):
