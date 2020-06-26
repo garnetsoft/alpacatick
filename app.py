@@ -562,22 +562,16 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
 
                         #orders_hist.append(row.to_dict('records'))
                         pos[sym] = row
-                        orders_hist.append([datetime.now(), sym, init_order_size, 'buy', 'ENTRY', row['close'], row['qtm']])
+                        orders_hist.append([datetime.now(), sym, init_order_size, 'buy', 'ENTRY_LONG', row['close'], row['qtm']])
 
                     elif long_or_short < 0:
-                        print(f'XXXX system does not support SHORT SELL orders, skip signal: {sym}')
+                        #print(f'XXXX system does not support SHORT SELL orders, skip signal: {sym}')
 
-                        """
-                        if pos.get(row['sym'], None) is not None:
-                            print(f'$$$$ sending Sell (exit) order for signal: {row}')
-                            #send_basic_order(api, row['sym'], init_order_size, 'sell')
-                            send_exit_order(row['sym'].decode('utf-8'), init_order_size, 'sell')
-                            del pos[row['sym']]
+                        status = send_basic_order(api, sym, init_order_size, 'sell')
+                        print(f"$$$$ sent order for signal: {sym}, status: {status}")
 
-                            orders_hist.append([datetime.now(), row['sym'].decode('utf-8'), init_order_size, 'sell', 'mkt', row['close'], row['qtm']])
-                        else:
-                            print(f'XXXX system does not support SHORT SELL orders, skip signal: {row}')
-                        """
+                        pos[sym] = row
+                        orders_hist.append([datetime.now(), sym, init_order_size, 'sell', 'ENTRY_SHORT', row['close'], row['qtm']])
 
                     else:
                         print(f'XXXX Unkown state, skip signal: {row}')
