@@ -584,24 +584,27 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
                     elif pos.get(sym, None) is None:
                         pass
                     else:
+                        side = 'sell'
+                        if long_or_short < 0:
+                            side = 'buy'
 
                         if signals_count_dict[sym] == 10:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
-                            send_exit_order(sym, init_order_size/2, 'sell')
+                            send_exit_order(sym, init_order_size/2, side)
                             print('$$$$ exiting 1/2 profitable position0: sell {init_order_size/2} {sym}')
-                            orders_hist.append([datetime.now(), sym, init_order_size/2, 'sell', 'TAKE_PROFIT1', row['close'], row['qtm']])
+                            orders_hist.append([datetime.now(), sym, init_order_size/2, side, 'TAKE_PROFIT1', row['close'], row['qtm']])
 
                         elif signals_count_dict[sym] == 15:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
-                            send_exit_order(sym, init_order_size/4, 'sell')
+                            send_exit_order(sym, init_order_size/4, side)
                             print('$$$$ exiting 1/2 profitable position1: sell {init_order_size/4} {sym}')
-                            orders_hist.append([datetime.now(), sym, init_order_size/4, 'sell', 'TAKE_PROFIT2', row['close'], row['qtm']])
+                            orders_hist.append([datetime.now(), sym, init_order_size/4, side, 'TAKE_PROFIT2', row['close'], row['qtm']])
 
                         elif signals_count_dict[sym] == 20:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
-                            send_exit_order(sym, init_order_size/4, 'sell')
+                            send_exit_order(sym, init_order_size/4, side)
                             print('$$$$ exiting 1/2 profitable position2: sell {init_order_size/4} {sym}')
-                            orders_hist.append([datetime.now(), sym, init_order_size/4, 'sell', 'TAKE_PROFIT3', row['close'], row['qtm']])
+                            orders_hist.append([datetime.now(), sym, init_order_size/4, side, 'TAKE_PROFIT3', row['close'], row['qtm']])
 
                             del pos[sym]
 
@@ -612,7 +615,7 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
                                 print(f'AAAA removed signal {sym} from cache so it can be traded again $$$.')
 
 
-    print(f'$$$$: signals_count_dict: {signals_count_dict}')
+    print(f'$$$$: {long_or_short} signals_count_dict: {signals_count_dict}')
 
 
 def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
@@ -815,6 +818,7 @@ def background_thread():
 
             long_signals_rank = sorted(long_signals_count_dict.items(), key=lambda x: x[1], reverse=True) 
             short_signals_rank = sorted(short_signals_count_dict.items(), key=lambda x: x[1], reverse=True)
+            print(f'XXXX LONG: {long_signals_rank}, SHORT: {short_signals_rank}')
 
             print(f'$$$$$$$$ SSSSSSSSSSSSSSSSSSS sending wss updates {datetime.now()}')
 
