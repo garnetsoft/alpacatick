@@ -1,5 +1,11 @@
 "# alpaca data" 
 
+pandas data cleaning:
+
+https://github.com/Kyrand/dataviz-with-python-and-js
+
+https://www.kyrandale.com/static/pyjsdataviz/
+
 Part II: Create your Virtual Environment
 
 python3 -m venv my_environment

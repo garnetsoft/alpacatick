@@ -172,28 +172,50 @@ def send_basic_order(api, sym, qty, side):
         return False
 
 
-def send_entry_order(sym, size, side):
+
+def send_entry_order2(sym, size, side, signal, entry_type):
     if isinstance(sym, bytes):
         sym = sym.decode('utf-8')
 
-    status = send_basic_order(api, sym, size, side)
-    print(f'$$$$ entry order: {sym}, {side}, {size} executed. status: {status}')
+    print(f'$$$$ sending {entry_type} order for signal: {sym}')
 
-    # add to order_hist -
-
-    return None
-
-
-def send_exit_order(sym, size, side):
-    if isinstance(sym, bytes):
-        sym = sym.decode('utf-8')
-
-    status = send_basic_order(api, sym, size, side)
-    print(f'$$$$ exit order: {sym}, {side}, {size} executed. status: {status}')
-
+    status = None
+    if trading_enabled:
+        status = send_basic_order(api, sym, size, side)
+        print(f'$$$$ entry order: {sym}, {side}, {size} executed. status: {status}')
+    else:
+        print(f'XXXX trading_enabled is {trading_enabled}, entry order: {sym}, {side}, {size} NOT sent.')
+    
     ## - add to order_hist
+    orders_hist.append([datetime.now(), sym, size, side, entry_type, signal['close'], signal['qtm']])
+    pos[sym] = signal
 
-    return None
+    print(f"$$$$ sent order for {entry_type} signal: {sym}, status: {status}")
+
+    return status
+
+
+def send_exit_order2(sym, size, side, signal, exit_type):
+    if isinstance(sym, bytes):
+        sym = sym.decode('utf-8')
+
+    print(f'$$$$ sending {exit_type} order for signal: {sym}')
+
+    status = None
+    if trading_enabled:
+        status = send_basic_order(api, sym, size, side)
+        print(f'$$$$ entry order: {sym}, {side}, {size} executed. status: {status}')
+    else:
+        print(f'XXXX trading_enabled is {trading_enabled}, entry order: {sym}, {side}, {size} NOT sent.')
+    
+    ## - add to order_hist
+    orders_hist.append([datetime.now(), sym, size, side, exit_type, signal['close'], signal['qtm']])
+    #pos[sym] = signal
+
+    print(f"$$$$ sent order for {exit_type} signal: {sym}, status: {status}")
+
+    return status
+
 
 
 def close_sym_position(sym):
@@ -208,7 +230,7 @@ def close_sym_position(sym):
 
             qty = abs(int(float(position.qty)))
 
-            return send_exit_order(sym, qty, orderSide)
+            return send_basic_order(api, sym, qty, orderSide)
 
 
 def get_position_info(sym):
@@ -586,7 +608,7 @@ pos = {}
 def update_signals_count(signals_count_map, signals_count_dict, signals_df, long_or_short):
     #### update signals_rank -- $$$ IMPL
     
-    for i, row in signals_df.iterrows():
+    for _, row in signals_df.iterrows():
         sym = row['sym']
         if isinstance(sym, bytes):
             sym = sym.decode('utf-8')
@@ -597,7 +619,8 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
         else:
             prev = signals_count_map[sym]
             
-            if (prev['qtm'] != row['qtm']) and (prev['close'] != row['close']):
+            #if (prev['qtm'] != row['qtm']) and (prev['close'] != row['close']):
+            if prev['qtm'] != row['qtm']:
                 signals_count_dict[sym] += 1
                 signals_count_map[sym] = row  # update to the latest signal details -
 
@@ -606,67 +629,57 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
 
                     #if len(orders_hist) > int(config['orders_threshold']):
                     if len(pos) >= int(config['orders_threshold']):
-                        print(f'KKKK daily orders_threshold reached, not sending order for signal: {sym}')
+                        print(f'KKKK daily orders_threshold reached, not sending order for {long_or_short} signal: {sym}')
 
                         ### maybe we should clear out the positions with 1/4 pct of size left to give rooms to new opportunities ??
                         # clear_residual_positions()
-
 
                     elif pos.get(sym, None) is not None:
                         print(f'FFFF already has position for signal: {sym}')
 
                     elif long_or_short > 0:
-                        print(f'$$$$ sending Buy (entry) order for signal: {sym}')
-
-                        #if config.get('enable_trading', False) == 'True':
-                        status = send_basic_order(api, sym, init_order_size, 'buy')
-                        print(f"$$$$ sent order for signal: {sym}, status: {status}")
-
+                        send_entry_order2(sym, init_order_size, 'buy', row, 'ENTRY_LONG')
+                        #pos[sym] = row
                         #orders_hist.append(row.to_dict('records'))
-                        pos[sym] = row
-                        orders_hist.append([datetime.now(), sym, init_order_size, 'buy', 'ENTRY_LONG', row['close'], row['qtm']])
+                        #orders_hist.append([datetime.now(), sym, init_order_size, 'buy', 'ENTRY_LONG', row['close'], row['qtm']])
 
                     elif long_or_short < 0:
-                        #print(f'XXXX system does not support SHORT SELL orders, skip signal: {sym}')
-
-                        status = send_basic_order(api, sym, init_order_size, 'sell')
-                        print(f"$$$$ sent order for signal: {sym}, status: {status}")
-
-                        pos[sym] = row
-                        orders_hist.append([datetime.now(), sym, init_order_size, 'sell', 'ENTRY_SHORT', row['close'], row['qtm']])
+                        send_entry_order2(sym, init_order_size, 'sell', row, 'ENTRY_SHORT')
+                        #pos[sym] = row
+                        #orders_hist.append([datetime.now(), sym, init_order_size, 'sell', 'ENTRY_SHORT', row['close'], row['qtm']])
 
                     else:
-                        print(f'XXXX Unkown state, skip signal: {row}')
+                        print(f'XXXX Unkown state, skip {long_or_short} signal: {row}')
 
 
                 # exit for profit
                 elif signals_count_dict[sym] > 9:
-                    if not bool(config.get('enable_trading', False)):
-                        pass
-                    elif pos.get(sym, None) is None:
+                    #if not config.get('enable_trading', False) == 'True':
+                    #    print('XXXX trading is NOT enabled, ignoring {long_or_short} signal for {sym}')
+                    #    pass
+                    #elif pos.get(sym, None) is None:
+                    if pos.get(sym, None) is None:
                         pass
                     else:
-                        side = 'sell'
-                        if long_or_short < 0:
-                            side = 'buy'
+                        side = 'buy' if long_or_short < 0 else 'sell'
 
                         if signals_count_dict[sym] == 10:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
-                            send_exit_order(sym, init_order_size/2, side)
+                            send_exit_order2(sym, init_order_size/2, side, row, 'TAKE_PROFIT1')
                             print('$$$$ exiting 1/2 profitable position0: sell {init_order_size/2} {sym}')
-                            orders_hist.append([datetime.now(), sym, init_order_size/2, side, 'TAKE_PROFIT1', row['close'], row['qtm']])
+                            #orders_hist.append([datetime.now(), sym, init_order_size/2, side, 'TAKE_PROFIT1', row['close'], row['qtm']])
 
                         elif signals_count_dict[sym] == 15:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
-                            send_exit_order(sym, init_order_size/4, side)
+                            send_exit_order2(sym, init_order_size/4, side, row, 'TAKE_PROFIT2')
                             print('$$$$ exiting 1/4 profitable position1: sell {init_order_size/4} {sym}')
-                            orders_hist.append([datetime.now(), sym, init_order_size/4, side, 'TAKE_PROFIT2', row['close'], row['qtm']])
+                            #orders_hist.append([datetime.now(), sym, init_order_size/4, side, 'TAKE_PROFIT2', row['close'], row['qtm']])
 
                         elif signals_count_dict[sym] == 20:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
-                            send_exit_order(sym, init_order_size/4, side)
+                            send_exit_order2(sym, init_order_size/4, side, row, 'TAKE_PROFIT_EXIT')
                             print('$$$$ exiting 1/4 profitable position2: sell {init_order_size/4} {sym}')
-                            orders_hist.append([datetime.now(), sym, init_order_size/4, side, 'TAKE_PROFIT3', row['close'], row['qtm']])
+                            #orders_hist.append([datetime.now(), sym, init_order_size/4, side, 'TAKE_PROFIT3', row['close'], row['qtm']])
 
                             del pos[sym]
 
@@ -685,7 +698,7 @@ def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
     # exit_at_loss  - for long positions, going down to low of the day
     #               - for short positions, going up to high of the day
 
-    for i, row in signals_df.iterrows():
+    for _, row in signals_df.iterrows():
         sym = row['sym']
         if isinstance(sym, bytes):
             sym = sym.decode('utf-8')
@@ -695,11 +708,10 @@ def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
             signals_count_dict.pop(sym)
             print(f'XXXX removed sig {sym} from opposite signals map.')
 
-            ### NEED TO EXIT ACTIVE POSTION COMPLETELY $$$
-            if pos.get(sym, None) is not None:
-                print(f'$$$$ sending Sell (exit) order for signal: {sym}')
-                #send_basic_order(api, row['sym'], init_order_size, 'sell')
-                #send_exit_order(sym, init_order_size, 'sell')
+            ### NEED TO EXIT ACTIVE POSTION COMPLETELY so it can trade on opposite trend $$$
+            if pos.pop(sym, None) is not None:
+                print(f'$$$$ sending STOP_LOSS (exit) order for signal: {sym}')
+
                 #close_sym_position(sym)
                 pos_info = get_position_info(sym)
 
@@ -710,18 +722,16 @@ def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
                         orderSide = 'buy'
 
                     qty = abs(int(float(pos_info.qty)))
-                    send_exit_order(sym, qty, orderSide)
-
-                    del pos[sym]
-
-                    orders_hist.append([datetime.now(), sym, qty, orderSide, 'STOP_LOSS', row['close'], row['qtm']])
+                    send_exit_order2(sym, qty, orderSide, row, 'STOP_LOSS')
+                    #orders_hist.append([datetime.now(), sym, qty, orderSide, 'STOP_LOSS', row['close'], row['qtm']])
+                    #del pos[sym]
 
     return None
 
 
 def create_long_short_signals(stats):
     # APPLY signals and send orders to Alpaca, update real-time postions
-    signal_long = stats.loc[(stats.n>=30) & (stats.close==stats.mx) & (stats.close>stats.open)].copy()
+    signal_long = stats.loc[(stats.n>=stats_threshold) & (stats.close>=stats.mx) & (stats.close>stats.open)].copy()
     signal_long['signal'] = 'Mom_Long'
 
     # send to order event queue -
@@ -733,7 +743,7 @@ def create_long_short_signals(stats):
         remove_signals_count(short_signals_count_map, short_signals_count_dict, signal_long)
 
 
-    signals_short = stats.loc[(stats.n>=30) & (stats.close==stats.mn) & (stats.close<stats.open)].copy()
+    signals_short = stats.loc[(stats.n>=stats_threshold) & (stats.close<=stats.mn) & (stats.close<stats.open)].copy()
     signals_short['signal'] = 'Mom_Short'
 
     if len(signals_short) > 0:
@@ -767,12 +777,6 @@ def background_thread():
             socketio.sleep(13)
             count += 1
 
-            # stop trading 8 minutes before CLOSE -
-            cur_time = datetime.now()
-            cur_hr, cur_mm = cur_time.hour, cur_time.minute
-            print(f'XXXX DEBUG: TIME: {cur_hr}, {cur_mm}')
-
-
             stats = q("get_summary2[]")
             stats['count'] = count
 
@@ -784,14 +788,27 @@ def background_thread():
             #print(stats_json)
             #print(stats_html)
 
-            # merge Long/Short signals -
+            # check ACTIVE trading period -
+            cur_time = datetime.utcnow()
+            cur_hr, cur_mm = cur_time.hour, cur_time.minute
+            print(f'XXXX DEBUG: UTC TIME: {cur_time}, {cur_hr}, {cur_mm}')
+
             signals_df = pd.DataFrame()
-            if ((cur_hr == 15) and (cur_mm >= 52)) or (cur_hr >= 16):
+            if ((cur_hr <=13 ) and (cur_mm < 35)) or (cur_hr < 9):
+                print(f'HAHA: {datetime.now()} - market is not open yet.  trading starts 5 minutes after open.')
+            elif ((cur_hr == 19) and (cur_mm >= 55)):
+                close_all_positions()
+                get_account_info()
                 pnl_info = get_today_pnl()
-                print(f'HAHA: {datetime.now()} - done for the day. today_pnl: {pnl_info}')
+                print(f'$$$$: {datetime.now()} - done for the day. today_pnl: {pnl_info}')
+            elif cur_hr >= 20:
+                pnl_info = get_today_pnl()
+                print(f'HEHE: {datetime.now()} - done for the day. today_pnl: {pnl_info}')
             else:
                 signals_df = create_long_short_signals(stats)
 
+
+            # merged Long/Short signals -
             if len(signals_df) > 0:
                 signals_ui = signals_df[['count', 'sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal']]
                 print('xxxx signals_ui: ')
@@ -952,15 +969,16 @@ print('xxxx connect to Kdb...')
 #q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
 q = qconnection.QConnection(host='aq101', port=6001, pandas=True)
 
-print('XXXXXXXX enable_trading?? ', config.get('enable_trading'))
-if config.get('enable_trading', False) == 'True':
-    print('$$$$ enabled_trading=True')
-else:
-    print('XXXX enabled_trading=False')
 
-
-## order_entry_size
+## model settings:
 init_order_size = int(config.get('init_order_size', 4))
+stats_threshold = int(config.get('stats_threshold', 30))
+
+trading_enabled = False
+if config.get('enable_trading') == 'True':
+    trading_enabled = True
+
+print(f'XXXX trading_enabled={trading_enabled}')
 
 
 #### main ####
