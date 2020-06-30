@@ -1016,6 +1016,10 @@ $(document).ready(function() {
 
       // $('#log').html(msg.signals_html);
       // $('#log').append('<br>' + $('<div/>').text('positions allowed #' + msg.positions_allowed).html());
+      console.log('xxxx alerts')
+      console.log(msg.alerts)
+      $('#alerts').text(msg.alerts).html();
+
       $('#log').text('positions allowed #' + msg.positions_allowed).html();
       $('#debug').text(priceChart.series);
 

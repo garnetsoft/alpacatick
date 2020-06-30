@@ -85,8 +85,8 @@ def get_account_info():
 
     # open orders
     orders = api.list_orders(status="open")
-    for order in orders:
-        print(f'xxxx ord: {order}')
+    for i, order in enumerate(orders):
+        print(f'xxxx {i} ord: {order}')
 
     positions = api.list_positions()
     notional = 0.0
@@ -177,20 +177,29 @@ def send_entry_order2(sym, size, side, signal, entry_type):
     if isinstance(sym, bytes):
         sym = sym.decode('utf-8')
 
-    print(f'$$$$ sending {entry_type} order for signal: {sym}')
+    print(f'EEEE sending {entry_type} order for signal: {sym}')
 
     status = None
     if trading_enabled:
         status = send_basic_order(api, sym, size, side)
-        print(f'$$$$ entry order: {sym}, {side}, {size} executed. status: {status}')
+        print(f'EEEE entry order: {sym}, {side}, {size} executed. status: {status}')
     else:
-        print(f'XXXX trading_enabled is {trading_enabled}, entry order: {sym}, {side}, {size} NOT sent.')
+        print(f'EEEE trading_enabled is {trading_enabled}, entry order: {sym}, {side}, {size} NOT sent.')
     
     ## - add to order_hist
     orders_hist.append([datetime.now(), sym, size, side, entry_type, signal['close'], signal['qtm']])
     pos[sym] = signal
 
-    print(f"$$$$ sent order for {entry_type} signal: {sym}, status: {status}")
+    #print(f"EEEE sent order for {entry_type} signal: {sym}, status: {status}")
+    if status:
+        print(f"EEEE sent order for {entry_type} signal: {sym}, status: {status}")
+    else:
+        ## raise alert !!
+        alert_msg = f"EEEE ERROR in sent order for {entry_type} signal: {sym}, status: {status}"
+        global alerts
+        print(alert_msg)
+        alerts[sym] = alert_msg
+
 
     return status
 
@@ -199,20 +208,20 @@ def send_exit_order2(sym, size, side, signal, exit_type):
     if isinstance(sym, bytes):
         sym = sym.decode('utf-8')
 
-    print(f'$$$$ sending {exit_type} order for signal: {sym}')
+    print(f'EEEE sending {exit_type} order for signal: {sym}')
 
     status = None
     if trading_enabled:
         status = send_basic_order(api, sym, size, side)
-        print(f'$$$$ entry order: {sym}, {side}, {size} executed. status: {status}')
+        print(f'EEEE exit order: {sym}, {side}, {size} executed. status: {status}')
     else:
-        print(f'XXXX trading_enabled is {trading_enabled}, entry order: {sym}, {side}, {size} NOT sent.')
+        print(f'EEEE trading_enabled is {trading_enabled}, entry order: {sym}, {side}, {size} NOT sent.')
     
     ## - add to order_hist
     orders_hist.append([datetime.now(), sym, size, side, exit_type, signal['close'], signal['qtm']])
     #pos[sym] = signal
 
-    print(f"$$$$ sent order for {exit_type} signal: {sym}, status: {status}")
+    print(f"EEEE sent order for {exit_type} signal: {sym}, status: {status}")
 
     return status
 
@@ -262,7 +271,6 @@ def clear_residual_positions():
 
         ## also need to clear positions from pos, add to order_hist as well
 
-
     return respSO
 
 
@@ -272,7 +280,6 @@ def close_all_positions():
         print("All postions closed.")
     except Exception as e:
         print(f"Error: {str(e)}")
-
 
 
 #### stats module 
@@ -292,7 +299,7 @@ def index():
 def test_message(message):
     session['receive_count'] = session.get('receive_count', 0) + 1
 
-    print(f'xxxx CONFIG: {message}')
+    print(f'xxxx CONFIG UPDATE: {message}')
     #clear_residual_positions()
 
     emit('my_response',
@@ -304,7 +311,7 @@ def test_message(message):
 def test_broadcast_message(message):
     session['receive_count'] = session.get('receive_count', 0) + 1
 
-    print(f'xxxx HALT: {message}')
+    print(f'xxxx HALT TRADING: {message}')
     # keyword from UI -
     #close_all_positions()
 
@@ -323,12 +330,13 @@ def ping_pong():
 @socketio.on('connect', namespace='/test2')
 def test_connect():
     global thread
-    with thread_lock:
-        if thread is None:
-            thread = socketio.start_background_task(target=background_thread)
 
     # initQ
     initQ()
+
+    with thread_lock:
+        if thread is None:
+            thread = socketio.start_background_task(target=background_thread)
 
     # send data
     emit('my_response', {'data': 'Connected, Q is ready to publish data...', 'count': 0})
@@ -722,7 +730,7 @@ def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
                         orderSide = 'buy'
 
                     qty = abs(int(float(pos_info.qty)))
-                    send_exit_order2(sym, qty, orderSide, row, 'STOP_LOSS')
+                    send_exit_order2(sym, qty, orderSide, row, 'STOP_LOSS_EXIT')
                     #orders_hist.append([datetime.now(), sym, qty, orderSide, 'STOP_LOSS', row['close'], row['qtm']])
                     #del pos[sym]
 
@@ -789,22 +797,25 @@ def background_thread():
             #print(stats_html)
 
             # check ACTIVE trading period -
-            cur_time = datetime.utcnow()
-            cur_hr, cur_mm = cur_time.hour, cur_time.minute
-            print(f'XXXX DEBUG: UTC TIME: {cur_time}, {cur_hr}, {cur_mm}')
+            utc_time = datetime.utcnow()
+            cur_hr, cur_mm = utc_time.hour, utc_time.minute
+            print(f'XXXX DEBUG: UTC_TIME: {utc_time}, {cur_hr}, {cur_mm}')
 
             signals_df = pd.DataFrame()
             if ((cur_hr <=13 ) and (cur_mm < 35)) or (cur_hr < 9):
                 print(f'HAHA: {datetime.now()} - market is not open yet.  trading starts 5 minutes after open.')
             elif ((cur_hr == 19) and (cur_mm >= 55)):
-                close_all_positions()
+                if trading_enabled:
+                    close_all_positions()
+                
                 get_account_info()
                 pnl_info = get_today_pnl()
-                print(f'$$$$: {datetime.now()} - done for the day. today_pnl: {pnl_info}')
+                print(f'$$$$: {datetime.now()} - closing out today positions. today_pnl: {pnl_info}')
             elif cur_hr >= 20:
                 pnl_info = get_today_pnl()
                 print(f'HEHE: {datetime.now()} - done for the day. today_pnl: {pnl_info}')
             else:
+                print('XXXX updating long/short signals...')
                 signals_df = create_long_short_signals(stats)
 
 
@@ -937,6 +948,7 @@ def background_thread():
                             'minute_json': json.dumps(minute_json),
 
                             'positions_allowed': positions_allowed,
+                            'alerts': str(alerts),
 
                             }, namespace='/test2')
 
@@ -971,15 +983,30 @@ q = qconnection.QConnection(host='aq101', port=6001, pandas=True)
 
 
 ## model settings:
-init_order_size = int(config.get('init_order_size', 4))
-stats_threshold = int(config.get('stats_threshold', 30))
-
+init_order_size = 4
+stats_threshold = 30
 trading_enabled = False
-if config.get('enable_trading') == 'True':
-    trading_enabled = True
 
-print(f'XXXX trading_enabled={trading_enabled}')
+def update_configs(**kwargs):
+    #print(kwargs)
+    #print(kwargs.keys())
+    for k, v in kwargs.items():
+        print(f'{k}->{v}')
+        config[k] = v
 
+    ## update global vars
+    global init_order_size, stats_threshold, trading_enabled
+    init_order_size = int(config.get('init_order_size', 4))
+    stats_threshold = int(config.get('stats_threshold', 30))
+    trading_enabled = True if config.get('enable_trading') == 'True' else False
+    
+    print(f'XXXX trading_enabled={trading_enabled}')
+
+    return None
+
+#update_configs(**{'key':'value', 'haha':'hehe'})    
+update_configs(**{})
+alerts = {'SPY': 'THIS IS A TEST ALERT.'}
 
 #### main ####
 if __name__ == '__main__':
