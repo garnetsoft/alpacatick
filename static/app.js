@@ -96,7 +96,7 @@ $(document).ready(function() {
       },
   
       exporting: {
-          enabled: false
+          enabled: true
       },
   
       // try multiple series -
@@ -269,9 +269,6 @@ $(document).ready(function() {
         pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.2f}'
     },
 
-    // legend: {
-    //     enabled: false
-    // },
     legend: {
       layout: 'vertical',
       align: 'right',
@@ -279,7 +276,7 @@ $(document).ready(function() {
     },
 
     exporting: {
-        enabled: false
+        enabled: true
     },
 
     // try multiple series -

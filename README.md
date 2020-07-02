@@ -1,5 +1,51 @@
 "# alpaca data" 
 
+http://www.timestored.com/kdb-guides/python-api
+
+q).z.ws:{neg[.z.w] .Q.s @[value;x;{`$"'",x}]}
+
+let nodeq = require("node-q");
+
+nodeq.connect({host: "codycent", port: 8080}, (err, con) => {
+if (err) throw err;
+console.log("connected");
+// interact with con like demonstrated below
+
+con.k("returnTable 3", (err, res) => {
+if (err) throw err;
+console.log("result:", res); // 6
+});
+});
+
+and by running it we see result similar to below:
+
+
+$node test.js
+connected
+result: [ { x: 0, y: 'a' }, { x: 1, y: 'b' }, { x: 2, y: 'c' } ]
+
+
+Listen to a handle
+con.k(function(err, res) {
+	if (err) throw err;
+	console.log("result", res);
+});
+
+Subscribe to kdb+tick
+con.on("upd", function(table, data) {
+	console.log(table, data);
+});
+
+con.ks(".u.sub[`;`]", function(err) { // subscribe to all tables and all symbols
+	if (err) throw err;
+});
+
+Close connection
+con.close(function() {
+	console.log("con closed");
+});
+
+
 pandas data cleaning:
 
 https://github.com/Kyrand/dataviz-with-python-and-js

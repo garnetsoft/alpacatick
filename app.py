@@ -284,8 +284,10 @@ def close_all_positions():
 
 #### stats module 
 def rebase_series(series):
-    return (series / series.iloc[0]) * 100
+    if len(series) > 0:
+        return (series / series.iloc[0]) * 100
 
+    return series
 
 
 ### app routes -
@@ -364,7 +366,8 @@ def get_sector_bar():
 
     try:        
         df = q(query)
-        df = rebase_series(df.dropna())
+        df = df.replace(0, np.nan).bfill().ffill()
+        df = rebase_series(df)
         data_json = [{"name": s, "data": list(map(list, zip([int(pd.to_datetime(datetime.strptime("{} {}".format(td, str(x)[-8:]), '%m/%d/%Y %H:%M:%S')).value / 1000000) for x in mdata.index], mdata))) } for s, mdata in df.items()]
         #print(f'XXXX get_sector_bar: {data_json}')
 
@@ -393,7 +396,8 @@ def compute_sector_stats():
     try:        
         df = q(query)
         #df = rebase_series(df.bfill()).dropna()
-        df = rebase_series(df.bfill().ffill())
+        df = df.replace(0, np.nan).bfill().ffill()
+        df = rebase_series(df)
         df_stats = df.describe()
 
         df_stats.loc['open'] = df.iloc[0]
@@ -738,6 +742,9 @@ def remove_signals_count(signals_count_map, signals_count_dict, signals_df):
 
 
 def create_long_short_signals(stats):
+    # ONLY DOW 30 NAMES -
+
+
     # APPLY signals and send orders to Alpaca, update real-time postions
     signal_long = stats.loc[(stats.n>=stats_threshold) & (stats.close>=stats.mx) & (stats.close>stats.open)].copy()
     signal_long['signal'] = 'Mom_Long'
@@ -802,7 +809,7 @@ def background_thread():
             print(f'XXXX DEBUG: UTC_TIME: {utc_time}, {cur_hr}, {cur_mm}')
 
             signals_df = pd.DataFrame()
-            if ((cur_hr <=13 ) and (cur_mm < 35)) or (cur_hr < 9):
+            if ((cur_hr <=13 ) and (cur_mm < 35)) or (cur_hr < 13):
                 print(f'HAHA: {datetime.now()} - market is not open yet.  trading starts 5 minutes after open.')
             elif ((cur_hr == 19) and (cur_mm >= 55)):
                 if trading_enabled:
@@ -867,7 +874,7 @@ def background_thread():
                     print(orders_hist_df)
 
                 # send to html
-                orders_hist_html += orders_hist_df.to_html(classes="table table-hover table-bordered table-striped",header=True)
+                orders_hist_html += orders_hist_df.sort_index(ascending=False).to_html(classes="table table-hover table-bordered table-striped",header=True)
                 #print(orders_hist_html)
 
 
@@ -918,7 +925,7 @@ def background_thread():
 
             ### send alert to UI when delay is over 1m - IMPL
             live_positions_df = get_live_positions()
-            live_positions_html = live_positions_df.to_html(classes="table table-hover table-bordered table-striped",header=True)
+            live_positions_html = live_positions_df.sort_values('unrealized_pn').to_html(classes="table table-hover table-bordered table-striped",header=True)
 
 
             long_signals_rank = sorted(long_signals_count_dict.items(), key=lambda x: x[1], reverse=True) 
