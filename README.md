@@ -1,5 +1,47 @@
 "# alpaca data" 
 
+import logging
+import platform
+import requests
+
+logger = logging.getLogger(__name__)
+SESSION = requests.Session()
+
+2020-07-06 09:23:45,398 INFO     [97%] 230/237 fragments fetched
+XXXX remote_file_url: https://zk.sd-dykj.com/2020/06/19/RYlhrKFHPctJ2fcN/out234.ts
+XXXX remote_file_url: https://zk.sd-dykj.com/2020/06/19/RYlhrKFHPctJ2fcN/out235.ts
+XXXX remote_file_url: https://zk.sd-dykj.com/2020/06/19/RYlhrKFHPctJ2fcN/out236.ts
+
+subprocess call -
+
+    target_mp4 = self.output_filename
+    if not target_mp4.endswith(".mp4"):
+        target_mp4 += ".mp4"
+    cmd = ["ffmpeg",
+            "-loglevel", "warning",
+            "-allowed_extensions", "ALL",
+            "-i", self.media_playlist_localfile,
+            "-acodec", "copy",
+            "-vcodec", "copy",
+            # "-bsf:a", "aac_adtstoasc",
+            target_mp4]
+    logger.info("Running: %s", cmd)
+    proc = subprocess.run(cmd)
+    if proc.returncode != 0:
+        logger.error("run ffmpeg command failed: exitcode=%s",
+                        proc.returncode)
+        sys.exit(proc.returncode)
+    logger.info("mp4 file created, size=%.1fMiB, filename=%s",
+                filesizeMiB(target_mp4), target_mp4)
+    logger.info("Removing temp files in dir: \"%s\"", self.tempdir)
+    if os.path.exists("/bin/rm"):
+        subprocess.run(["/bin/rm", "-rf", self.tempdir])
+    elif os.path.exists("C:/Windows/SysWOW64/cmd.exe"):
+        subprocess.run(["rd", "/s", "/q", self.tempdir], shell=True)
+    logger.info("temp files removed")
+    
+
+
 http://www.timestored.com/kdb-guides/python-api
 
 q).z.ws:{neg[.z.w] .Q.s @[value;x;{`$"'",x}]}

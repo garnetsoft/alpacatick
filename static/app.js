@@ -986,31 +986,7 @@ $(document).ready(function() {
   // var signal_hist = [];
   socket.on('my_response', function(msg) {
       // show a flashing banner -
-
-      // console.log(priceChart)
-      // console.log(priceChart.series)
-
-      //priceChart.setSeriesData(series2)
-      //priceChart.update({})
-
-      if (typeof msg.prices_series !== 'undefined') {
-
-        //console.log('priceChart:')
-        //var priceSeries = JSON.parse(msg.prices_series)
-        //priceChart.update({series: priceSeries}, true, true);
-        //console.log(priceChart.series[0].data)
-
-        // update bubbleChart -
-        //bubbleChart.update({series: bubble}, true, true);
-        //console.log(bubbleChart.series[0].data)
-
-        //console.log('xxxx minute_json:')
-        //console.log(msg.minute_json)
-        //var minute_obj = JSON.parse(msg.minute_json)
-        //console.log(minute_obj)
-        //minuteChart.update({series: minute_obj}, true, true);
-      }
-
+      
       // $('#log').html(msg.signals_html);
       // $('#log').append('<br>' + $('<div/>').text('positions allowed #' + msg.positions_allowed).html());
       console.log('xxxx alerts')
@@ -1067,11 +1043,23 @@ $(document).ready(function() {
 
   });
 
+  
+  // COMMAND
+  socket.on('my_info', function(msg) {
+    // show a flashing banner -
+
+    console.log('xxxx info:')
+    console.log(msg)
+
+    $('#info').text(JSON.stringify(msg)).html();
+    //$('#info').text(JSON.parse(msg.config)).html();
+  });
+
   // Handlers for the different forms in the page.
   // These accept data from the user and send it to the server in a
   // variety of ways
   $('form#emit').submit(function(event) {
-    socket.emit('my_event', {data: $('#emit_data').val()});
+    socket.emit('my_info', {data: $('#emit_data').val()});
     return false;
   });
   $('form#broadcast').submit(function(event) {

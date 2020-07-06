@@ -68,19 +68,22 @@
 <body>
     <div class="container-fluid">
 
-    <h1>AQ Signals</h1>
+    <h1>AQ Signals - trading_enabled: {{ trading_enabled }} </h1>
     <p>Async mode is: <b>{{ async_mode }}</b></p>
     <p>Average ping/pong latency: <b><span id="ping-pong"></span> (ms)</b></p>
     <p>latency details: <b><span id="latency"></span></b></p>
 
-    <h2>Command:</h2>
+    <h2>Command: </h2>
+    <hr>
+    <div id="info" class="alert alert-info" role="alert"></div>
+    <br>
     <form id="emit" method="POST" action='#'>
-        <input type="text" name="emit_data" id="emit_data" placeholder="Message">
-        <input type="submit" value="Setting">
+        <input type="text" name="emit_data" id="emit_data" placeholder="key=value">
+        <input type="submit" value="Upd Settings">
     </form>
     <form id="broadcast" method="POST" action='#'>
         <input type="text" name="broadcast_data" id="broadcast_data" placeholder="Message">
-        <input type="submit" value="Halt">
+        <input type="submit" value="Halt Trading">
     </form>
 
     <form id="disconnect" method="POST" action="#">
@@ -89,13 +92,12 @@
 
     <hr>
     <div id="alerts" class="alert alert-danger" role="alert"></div>
-    <hr>
     <div id="log">log:</div>
     <h3>debug:</h3>
     <div id="debug"></div>
-    <hr>
-    <div id="priceChart"></div>    
+
     <!-------------------------------------------->
+    <div id="priceChart"></div>    
 
     <hr>
     <h2>Real-time chart:</h2>

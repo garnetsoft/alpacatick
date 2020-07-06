@@ -25,6 +25,10 @@ from threading import Lock
 from datetime import datetime
 import traceback
 
+import uuid
+UUID = uuid.uuid1()
+print(UUID)
+
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -40,6 +44,7 @@ thread_lock = Lock()
 
 # global properties
 config = {}
+
 
 # config utils
 def load_app_config(config_file):
@@ -63,6 +68,10 @@ def initQ():
 
     print(q)
     print('IPC version: %s. Is connected: %s' % (q.protocol_version, q.is_connected()))
+
+
+def gen_order_id():
+    return uuid.uuid1().hex[:8]
 
 
 ### position management ###
@@ -108,12 +117,12 @@ def get_live_positions():
             print(f'$$$$ {i} pos: {pos.symbol}, qty: {pos.qty},  market_value: {pos.market_value}, unrealized_pnl: {pos.unrealized_pl}, side: {pos.side}, \
                 avg_entry_price:{pos.avg_entry_price}, current_price: {pos.current_price}' )
 
-            pos_list.append([pos.symbol, pos.qty, pos.market_value, pos.unrealized_pl, pos.side, pos.avg_entry_price, pos.current_price])
+            pos_list.append([pos.symbol, pos.qty, pos.market_value, float(pos.unrealized_pl), pos.side, pos.avg_entry_price, pos.current_price])
             notional += float(pos.market_value)
 
         print(f'$$$$ total USD: {notional}')
 
-    pos_df = pd.DataFrame(pos_list, columns=['symbol', 'qty', 'market_value', 'unrealized_pn', 'side', 'avg_entry_price', 'current_price'])
+    pos_df = pd.DataFrame(pos_list, columns=['symbol', 'qty', 'market_value', 'unrealized_pl', 'side', 'avg_entry_price', 'current_price'])
 
     return pos_df
 
@@ -187,7 +196,10 @@ def send_entry_order2(sym, size, side, signal, entry_type):
         print(f'EEEE trading_enabled is {trading_enabled}, entry order: {sym}, {side}, {size} NOT sent.')
     
     ## - add to order_hist
-    orders_hist.append([datetime.now(), sym, size, side, entry_type, signal['close'], signal['qtm']])
+    order_id = gen_order_id()
+    order_id_dict[sym] = order_id
+    orders_hist.append([datetime.now(), sym, size, side, entry_type, signal['close'], signal['qtm'], order_id])
+
     pos[sym] = signal
 
     #print(f"EEEE sent order for {entry_type} signal: {sym}, status: {status}")
@@ -218,7 +230,8 @@ def send_exit_order2(sym, size, side, signal, exit_type):
         print(f'EEEE trading_enabled is {trading_enabled}, entry order: {sym}, {side}, {size} NOT sent.')
     
     ## - add to order_hist
-    orders_hist.append([datetime.now(), sym, size, side, exit_type, signal['close'], signal['qtm']])
+    org_order_id = order_id_dict.get(sym, None)
+    orders_hist.append([datetime.now(), sym, size, side, exit_type, signal['close'], signal['qtm'], org_order_id])
     #pos[sym] = signal
 
     print(f"EEEE sent order for {exit_type} signal: {sym}, status: {status}")
@@ -293,19 +306,43 @@ def rebase_series(series):
 ### app routes -
 @app.route('/')
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode)
+    return render_template('index.html', async_mode=socketio.async_mode, trading_enabled=trading_enabled, )
 
 
 ### update global config - insert key/value pair
-@socketio.on('my_event', namespace='/test2')
+@socketio.on('my_info', namespace='/test2')
 def test_message(message):
     session['receive_count'] = session.get('receive_count', 0) + 1
-
     print(f'xxxx CONFIG UPDATE: {message}')
     #clear_residual_positions()
+    
+    cmdstr = str(message['data'])
+    if cmdstr.index('=') > 0:
+        kv = cmdstr.split("=")
+        k, v = kv[0], kv[1]
+        print(f'xxxx CONFIG COMMAND: {k}={v}')
+        update_configs(**{k: v})
 
-    emit('my_response',
-         {'data': message['data'], 'count': session['receive_count']})
+    info_data = len(pos)
+
+    if cmdstr.startswith('pos'):
+        print(f'xxxx printPos()')
+        
+        if info_data > 0:
+            info_data = pos[list(pos)[-1]]
+    elif cmdstr.startswith('cache'):
+        print(f'xxxx printCache()')
+
+
+    print(f'XXXX SETTINGS : {info_data}')
+
+
+    ## wss update -
+    emit('my_info',
+         {'data': message['data'], 'count': session['receive_count'], 
+         'config': json.dumps(config), 
+         'info_data': info_data,
+         })
 
 
 ### CLOSE ALL POSITIONS $$$
@@ -615,7 +652,7 @@ orders_hist_df = pd.DataFrame()
 # track every position's pnl
 acct_pnl = {}
 pos = {}
-
+order_id_dict = {}
 
 def update_signals_count(signals_count_map, signals_count_dict, signals_df, long_or_short):
     #### update signals_rank -- $$$ IMPL
@@ -677,13 +714,14 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
 
                         if signals_count_dict[sym] == 10:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
-                            send_exit_order2(sym, init_order_size/2, side, row, 'TAKE_PROFIT1')
+                            # get position size from entry order AND broker to ensure double confirmation
+                            send_exit_order2(sym, init_order_size/2, side, row, 'TAKE_PROFIT_1')
                             print('$$$$ exiting 1/2 profitable position0: sell {init_order_size/2} {sym}')
                             #orders_hist.append([datetime.now(), sym, init_order_size/2, side, 'TAKE_PROFIT1', row['close'], row['qtm']])
 
                         elif signals_count_dict[sym] == 15:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
-                            send_exit_order2(sym, init_order_size/4, side, row, 'TAKE_PROFIT2')
+                            send_exit_order2(sym, init_order_size/4, side, row, 'TAKE_PROFIT_2')
                             print('$$$$ exiting 1/4 profitable position1: sell {init_order_size/4} {sym}')
                             #orders_hist.append([datetime.now(), sym, init_order_size/4, side, 'TAKE_PROFIT2', row['close'], row['qtm']])
 
@@ -693,6 +731,7 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
                             print('$$$$ exiting 1/4 profitable position2: sell {init_order_size/4} {sym}')
                             #orders_hist.append([datetime.now(), sym, init_order_size/4, side, 'TAKE_PROFIT3', row['close'], row['qtm']])
 
+                            del order_id_dict[sym]
                             del pos[sym]
 
                             ## start over - reset cache so we can trade this again if momentum builds up
@@ -864,7 +903,7 @@ def background_thread():
             
             if len(orders_hist) > 0:
                 #orders_hist_df = pd.concat(orders_hist)
-                orders_hist_df = pd.DataFrame(orders_hist, columns=['order_time', 'symbol', 'size', 'side', 'ord_type', 'ref_price', 'signal_time'])
+                orders_hist_df = pd.DataFrame(orders_hist, columns=['order_time', 'symbol', 'size', 'side', 'ord_type', 'ref_price', 'signal_time', 'order_id'])
                 #print(orders_hist_df)
                 
                 ## save to file
@@ -925,7 +964,7 @@ def background_thread():
 
             ### send alert to UI when delay is over 1m - IMPL
             live_positions_df = get_live_positions()
-            live_positions_html = live_positions_df.sort_values('unrealized_pn').to_html(classes="table table-hover table-bordered table-striped",header=True)
+            live_positions_html = live_positions_df.sort_values('unrealized_pl').to_html(classes="table table-hover table-bordered table-striped",header=True)
 
 
             long_signals_rank = sorted(long_signals_count_dict.items(), key=lambda x: x[1], reverse=True) 
@@ -1017,5 +1056,5 @@ alerts = {'SPY': 'THIS IS A TEST ALERT.'}
 
 #### main ####
 if __name__ == '__main__':
-    #socketio.run(app, debug=False)
+    #socketio.run(app, debug=True)
     socketio.run(app, debug=False, host='0.0.0.0', port=8501)
