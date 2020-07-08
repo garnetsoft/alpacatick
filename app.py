@@ -848,7 +848,7 @@ def get_agg_pnl(df):
             pnl_map[sym] += pnl
             #print(f"xxxx LONG order_id: {name}, {g.iloc[0]['symbol']} pnl {pnl}")
         elif g.iloc[0]['ord_type'] == 'ENTRY_SHORT':
-            pnl = calc_pnl(g, 1)
+            pnl = calc_pnl(g, -1)
             short_pnl += pnl
             pnl_map[sym] += pnl
             #print(f"xxxx SHORT order_id: {name}, {g.iloc[0]['symbol']} pnl {pnl}")
