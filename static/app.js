@@ -999,6 +999,7 @@ $(document).ready(function() {
 
       $('#signals_rank_long').html(msg.signals_rank_long);
       $('#signals_rank_short').html(msg.signals_rank_short);
+      $('#sorted_pnl').html(msg.sorted_pnl);
 
       $('#orders_hist_html').html(msg.orders_hist_html);      
       $('#live_positions_html').html(msg.live_positions_html);

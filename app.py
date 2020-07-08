@@ -815,6 +815,52 @@ def create_long_short_signals(stats):
     return pd.concat([signal_long, signals_short])
 
 
+def calc_pnl(g, long_or_short):
+    entry_price = g.iloc[0]['ref_price']
+    total_pnl = 0.0
+
+    for i, (index, r) in enumerate(g.iterrows()):
+        # print(f'xxxx: {i}, {r}')
+        # if not r['ord_type'].startswith('ENTRY'): # calc each pnl
+        if i > 0:
+            exit_price = r['ref_price']
+            size = r['size']
+            total_pnl += (exit_price - entry_price) * size * long_or_short
+
+    # print(f'$$$$ total_pnl: {total_pnl}, {size}')
+    return total_pnl
+
+
+def get_agg_pnl(df):
+    #orders_hist_df = pd.DataFrame(orders_hist, columns=['order_time', 'symbol', 'size', 'side', 'ord_type', 'ref_price', 'signal_time', 'order_id'])
+
+    long_pnl, short_pnl = 0.0, 0.0
+    pnl_map = defaultdict(float)
+    
+    #for name, g in df.loc[df.symbol=='TWTR'].groupby('order_id'):
+    for name, g in df.groupby('order_id'):
+        #print(f'xxxx order_id {name}, DDDD: {len(g)}, {g}')
+        sym = g.iloc[0]['symbol']
+
+        if g.iloc[0]['ord_type'] == 'ENTRY_LONG':
+            pnl = calc_pnl(g, 1)
+            long_pnl += pnl
+            pnl_map[sym] += pnl
+            #print(f"xxxx LONG order_id: {name}, {g.iloc[0]['symbol']} pnl {pnl}")
+        elif g.iloc[0]['ord_type'] == 'ENTRY_SHORT':
+            pnl = calc_pnl(g, 1)
+            short_pnl += pnl
+            pnl_map[sym] += pnl
+            #print(f"xxxx SHORT order_id: {name}, {g.iloc[0]['symbol']} pnl {pnl}")
+        else:
+            print(f'ERROR: Unknown entry order: {name}, {g}')
+
+    print(f'$$$$ total_pnl: {long_pnl+short_pnl}, long_pnl: {long_pnl}, short_pnl: {short_pnl}, shared_traded: {np.sum(df.size)}')
+    #print(sorted(pnl_map.items(), key=lambda x: x[1], reverse=True))
+    
+    return sorted(pnl_map.items(), key=lambda x: x[1], reverse=True)
+
+
 def background_thread():
     """Example of how to send server generated events to clients."""
     count = 0
@@ -822,6 +868,8 @@ def background_thread():
     signals_hist_df = pd.DataFrame()
     # track order hist change
     orders_hist_len = 0
+    sorted_pnl = defaultdict(float)
+
 
     try:
         while True:
@@ -915,13 +963,16 @@ def background_thread():
                 # send to html
                 orders_hist_html += orders_hist_df.sort_index(ascending=False).to_html(classes="table table-hover table-bordered table-striped",header=True)
                 #print(orders_hist_html)
+                
+                # sorted pnl -
+                sorted_pnl = get_agg_pnl(orders_hist_df)
 
 
             # minute price series -
-            query = '0!select data:100*price % first price by name:sym  from select last price by sym, qtm.minute from trade where sym like "XL*"'
-            prices_df = q(query)
-            prices_json = prices_df.to_json(orient='records')
-            print('xxxx prices_json:')
+            #query = '0!select data:100*price % first price by name:sym  from select last price by sym, qtm.minute from trade where sym like "XL*"'
+            #prices_df = q(query)
+            #prices_json = prices_df.to_json(orient='records')
+            #print('xxxx prices_json:')
             #print(prices_json)
 
             # create time series JSON obj for Highchart -
@@ -990,11 +1041,13 @@ def background_thread():
                             'signal': signals_json,                       
                             'summary': stats_json,
 
-                            'prices_series': prices_json,
+                            # 'prices_series': prices_json,
                             'minute_json': json.dumps(minute_json),
 
                             'positions_allowed': positions_allowed,
                             'alerts': str(alerts),
+
+                            'sorted_pnl': str(sorted_pnl),
 
                             }, namespace='/test2')
 
@@ -1056,5 +1109,5 @@ alerts = {'SPY': 'THIS IS A TEST ALERT.'}
 
 #### main ####
 if __name__ == '__main__':
-    #socketio.run(app, debug=True)
-    socketio.run(app, debug=False, host='0.0.0.0', port=8501)
+    socketio.run(app, debug=True)
+    #socketio.run(app, debug=False, host='0.0.0.0', port=8501)
