@@ -131,6 +131,8 @@ print(hist_vol.tail())
 
 
 # compute imp_vol for each contract -
+print(f'xxxx computing implied volatility for {len(df)} option contracts...')
+
 imp_vol_list = []
 j = 0
 for i, row in df.iterrows():
