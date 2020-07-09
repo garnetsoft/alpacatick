@@ -101,7 +101,8 @@ def test():
 
 # load option files -
 #tickers = '`spy`AAPL`ADS`TSLA`TWTR`AMZN`GE`DKNG`CVX'
-tickers = list(pd.read_csv('C:/Users/gfeng/OneDrive/git/data/dow30.csv').ticker)
+#tickers = list(pd.read_csv('C:/Users/gfeng/OneDrive/git/data/dow30.csv').ticker)
+tickers = list(pd.read_csv('/home/gfeng/git/data/dow30.csv').ticker)
 min_size = 100
 
 print(f'xxxx main...tickers: {tickers}')
@@ -196,5 +197,5 @@ print(opt_sorted.tail())
 opt_sorted_html = opt_sorted.to_html(classes="table table-hover table-bordered table-striped",header=True)
 
 # build a message object
-msg = message(subject="", text=opt_sorted_html, img='/tmp/GS.png', attachment=impvol_file)
+msg = message(subject="daily options IV/HV report -", text=opt_sorted_html, img='/home/gfeng/html/logo/GS.png', attachment=impvol_file)
 send(msg)  # send the email (defaults to Outlook)
