@@ -1,5 +1,36 @@
 "# alpaca data" 
 
+def wavg(val_col_name,wt_col_name):
+    def inner(group):
+        return (group[val_col_name] * group[wt_col_name]).sum() / group[wt_col_name].sum()
+    inner.__name__ = 'wgt_avg'
+    return inner
+
+
+
+d = {"P": pd.Series(['A','B','A','C','D','D','E'])
+     ,"Q": pd.Series([1,2,3,4,5,6,7])
+    ,"R": pd.Series([0.1,0.2,0.3,0.4,0.5,0.6,0.7])
+     }
+
+df = pd.DataFrame(d)
+print df.groupby('P').apply(wavg('Q','R'))
+
+P
+A    2.500000
+B    2.000000
+C    4.000000
+D    5.545455
+E    7.000000
+dtype: float64
+
+
+https://medium.com/@gfeng22/asset-price-volatility-methods-to-compute-it-8bf395babc1
+
+
+(Growth expectations were measured using the company’s market-to-book ratio. High market-to-book companies were considered growth companies, and low market-to-book companies were considered value companies.)
+
+
 import logging
 import platform
 import requests
