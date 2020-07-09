@@ -120,8 +120,9 @@ print(df.tail())
 
 # get historical daily prices - 
 print(f'xxxx get historical prices for {tickers}')
+today = datetime.today().date().strftime('%Y%m%d')
+
 sdate = datetime.today().date() - timedelta(days=61)
-#sdate.strftime('%Y-%m-%d')
 prices = ffn.get(tickers, start=sdate)
 print(prices.tail())
 
@@ -168,7 +169,7 @@ for i, row in df.iterrows():
 ### got all implied vol - HOW TO USE THIS?
 #print('xxxx imp_vol_list: ', imp_vol_list)
 
-impvol_file = f"/tmp/df_options_impvol_{sdate.strftime('%Y-%m-%d')}.csv"
+impvol_file = f"/tmp/df_options_impvol_{today}.csv"
 df['imp_vol'] = imp_vol_list
 df.to_csv(impvol_file)
 print(df.tail())
@@ -195,7 +196,8 @@ print(opt_sorted.head())
 print(opt_sorted.tail())
 
 opt_sorted_html = opt_sorted.to_html(classes="table table-hover table-bordered table-striped",header=True)
+opt_df.sort_values('iv_hv').to_csv(f'/tmp/df_options_impvol_sorted_{today}.csv')
 
 # build a message object
-msg = message(subject="daily options IV/HV report -", text=opt_sorted_html, img='/home/gfeng/html/logo/GS.png', attachment=impvol_file)
+msg = message(subject=f"daily options IV/HV report -{today}", text=opt_sorted_html, img='/home/gfeng/html/logo/GS.png', attachment=impvol_file)
 send(msg)  # send the email (defaults to Outlook)
