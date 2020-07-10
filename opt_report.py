@@ -163,7 +163,7 @@ for i, row in df.iterrows():
     
     if (i > 0) & (i % round(len(df)//10) == 0):
         j += 1
-        print(f'$$$$ ...{j*10}% processed {i} imp_vol: {imp_vol}, inputs: {premium}, {opt_type}, {spot0}, {strike}, {mat}, {riskless_rate}')
+        print(f'{datetime.now()} $$$$ ...{j*10}% processed {i} imp_vol: {imp_vol}, inputs: {premium}, {opt_type}, {spot0}, {strike}, {mat}, {riskless_rate}')
 
 
 ### got all implied vol - HOW TO USE THIS?
