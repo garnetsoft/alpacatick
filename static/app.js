@@ -1,11 +1,11 @@
 $(document).ready(function() {
-    // Use a "/test" namespace.
 
+    // tick chart to monitor ticks data
     var tickTopsChart = Highcharts.chart('topsChart', {
       chart: {
           //type: 'spline',
           zoomType: 'xy',
-          animation: Highcharts.svg, // don't animate in old IE
+          animation: Highcharts.svg,
           //marginRight: 10,
           
           events: {
@@ -78,7 +78,7 @@ $(document).ready(function() {
       yAxis: [{
           // Primary yAxis
           labels: {
-            format: '{value} °C',
+            format: '{value:.2f} °C',
             style: {
                 color: Highcharts.getOptions().colors[1]
             }
@@ -98,7 +98,7 @@ $(document).ready(function() {
             }
           },
           labels: {
-            format: '{value} °F',
+            format: '{value:.2f} °F',
             style: {
                 color: Highcharts.getOptions().colors[0]
             }
@@ -958,17 +958,127 @@ $(document).ready(function() {
     }
   });
   
+  
+// global functions -
+var renderChangesFn = function(o) {
+  //console.log('yyyy: ')
+  //console.log(o)
+  //console.log(o.data)
 
+  if (o.value < 0) {
+    o.style = {
+      color: '#E46B67'
+    };
+  } else {
+    o.style = {
+      color: '#65AE6E'
+    };
+  }
+
+  //o.value = o.value + '%';
+  o.value = o.value + ' ticks';    
+
+  return o;
+};
+
+
+var renderPriceFn = function(o) {
+  if (o.value) 
+      o.value = (o.value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  return o;
+};
+
+
+var renderAtrFn = function(o) {
+  if (o.data.dv > 0) {
+      dvmv = o.data.atr / o.data.dv
+      o.value = dvmv.toFixed(2) + ' sdev'
+  }
+  else
+      o.value = '0 sdev'
+
+  return o;
+};
+
+
+var renderCloseFn = function(o) {
+  //console.log('yyyy: ')
+  //console.log(o.data)
+
+  if (o.data.close < o.data.l2dv) {
+    o.style = {
+      color: '#E46B67',
+      'font-size': '14px',
+    };
+  } else if (o.data.close > o.data.r2dv) {
+    o.style = {
+      color: '#65AE6E',
+      'font-size': '14px'
+    };
+  }
+  else {
+      o.style = {
+          color: 'black',
+          'font-size': '12px'
+        };    
+  }
+
+  return o;
+};
+
+function formatNumber(num) {
+return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+}
+
+function currencyFormat(num) {
+return '$' + num.toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+}
+
+
+
+var signal_init = [
+{"id":476, "count": 0, "qtm": "2020-05-21 19:26:13.758", "sym":"AAPL", "price":[125.78,125.85,125.91,125.92,125.92],"src":"http://ny529s.com/logo/AAPL.png","volume":86180.0, "ps":[2, 1, 5, 5], "tick": 7.7, "signal": "Long"},
+{"id":1001, "count": 1,"qtm": "2020-05-21 19:26:13.758", "sym":"XOM",  "price":[85.05,85.135,85.135,85.075,85.075], "src":"http://ny529s.com/logo/XOM.png"," volume":79866.0, "ps":[2, 5, 1, 1], "tick": 8.8, "signal": "Short"}
+]
+
+
+// sym	qtm	n	open	mn	mu	md	mx	dv	vwap	close	chg	volume	l2dv	r2dv, ps
+var summary_init = [
+{"id": 0, "sym":"xxx", "qtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[5, 4, 3, 2, 1] , "pbox":[5, 4, 3, 2, 1], "ps":[2, 1, 5, 4] }, 
+{"id": 7, "sym":"yyy", "qtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[1, 2, 3, 4, 5] , "pbox":[1, 2, 3, 4, 5], "ps":[2, 1, 5, 4] }, 
+];
+
+
+var series2 = [{
+name: 'XXXXX',
+data: [43934, 52503, 57177, 69658, 97031, 119931, 137133, 154175]
+}, {
+name: 'ZZZZZ',
+data: [12908, 5948, 8105, 11248, 8989, 11816, 18274, 18111]
+}];
+
+var bubble = [{
+data: [
+  { x: 71, y: 93.2, z: 24.7, name: 'UK', country: 'United Kingdom' },
+  { x: 69.2, y: 57.6, z: 10.4, name: 'IT', country: 'Italy' },
+  { x: 68.6, y: 20, z: 16, name: 'RU', country: 'Russia' },
+]
+}]
+
+  
   // An application can open a connection on multiple namespaces, and
   // Socket.IO will multiplex all those connections on a single
   // physical channel. If you don't care about multiple channels, you
   // can set the namespace to an empty string.
+
+  // Use a "/test" namespace.
   namespace = '/test2';
 
   // Connect to the Socket.IO server.
   // The connection URL has the following format:
   //     http[s]://<domain>:<port>[/<namespace>]
-  console.log('xxxx 0000:')
+  console.log('xxxx 0000 socket url:')
   console.log(location.protocol + '//' + document.domain + ':' + location.port + namespace)
 
   // KICK OF THE BACKGROUND THREAD IN SOCKETIO
@@ -1106,110 +1216,4 @@ $(document).ready(function() {
 
 });
 
-
-// global functions
-var renderChangesFn = function(o) {
-    //console.log('yyyy: ')
-    //console.log(o)
-    //console.log(o.data)
-
-    if (o.value < 0) {
-      o.style = {
-        color: '#E46B67'
-      };
-    } else {
-      o.style = {
-        color: '#65AE6E'
-      };
-    }
-  
-    //o.value = o.value + '%';
-    o.value = o.value + ' ticks';    
-  
-    return o;
-};
-
-
-var renderPriceFn = function(o) {
-    if (o.value) 
-        o.value = (o.value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-    return o;
-};
-
-
-var renderAtrFn = function(o) {
-    if (o.data.dv > 0) {
-        dvmv = o.data.atr / o.data.dv
-        o.value = dvmv.toFixed(2) + ' sdev'
-    }
-    else
-        o.value = '0 sdev'
-
-    return o;
-};
-
-
-var renderCloseFn = function(o) {
-    //console.log('yyyy: ')
-    //console.log(o.data)
-
-    if (o.data.close < o.data.l2dv) {
-      o.style = {
-        color: '#E46B67',
-        'font-size': '14px',
-      };
-    } else if (o.data.close > o.data.r2dv) {
-      o.style = {
-        color: '#65AE6E',
-        'font-size': '14px'
-      };
-    }
-    else {
-        o.style = {
-            color: 'black',
-            'font-size': '12px'
-          };    
-    }
-  
-    return o;
-};
-
-function formatNumber(num) {
-  return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
-}
-
-function currencyFormat(num) {
-  return '$' + num.toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
-}
-
-
-
-var signal_init = [
-  {"id":476, "count": 0, "qtm": "2020-05-21 19:26:13.758", "sym":"AAPL", "price":[125.78,125.85,125.91,125.92,125.92],"src":"http://ny529s.com/logo/AAPL.png","volume":86180.0, "ps":[2, 1, 5, 5], "tick": 7.7, "signal": "Long"},
-  {"id":1001, "count": 1,"qtm": "2020-05-21 19:26:13.758", "sym":"XOM",  "price":[85.05,85.135,85.135,85.075,85.075], "src":"http://ny529s.com/logo/XOM.png"," volume":79866.0, "ps":[2, 5, 1, 1], "tick": 8.8, "signal": "Short"}
-]
-
-
-// sym	qtm	n	open	mn	mu	md	mx	dv	vwap	close	chg	volume	l2dv	r2dv, ps
-var summary_init = [
-  {"id": 0, "sym":"xxx", "qtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[5, 4, 3, 2, 1] , "pbox":[5, 4, 3, 2, 1], "ps":[2, 1, 5, 4] }, 
-  {"id": 7, "sym":"yyy", "qtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[1, 2, 3, 4, 5] , "pbox":[1, 2, 3, 4, 5], "ps":[2, 1, 5, 4] }, 
-];
-
-
-var series2 = [{
-  name: 'XXXXX',
-  data: [43934, 52503, 57177, 69658, 97031, 119931, 137133, 154175]
-}, {
-  name: 'ZZZZZ',
-  data: [12908, 5948, 8105, 11248, 8989, 11816, 18274, 18111]
-}];
-
-var bubble = [{
-  data: [
-    { x: 71, y: 93.2, z: 24.7, name: 'UK', country: 'United Kingdom' },
-    { x: 69.2, y: 57.6, z: 10.4, name: 'IT', country: 'Italy' },
-    { x: 68.6, y: 20, z: 16, name: 'RU', country: 'Russia' },
-  ]
-}]
+// EOF
