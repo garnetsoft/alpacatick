@@ -3,9 +3,11 @@ $(document).ready(function() {
 
     var tickTopsChart = Highcharts.chart('topsChart', {
       chart: {
-          type: 'spline',
+          //type: 'spline',
+          zoomType: 'xy',
           animation: Highcharts.svg, // don't animate in old IE
-          marginRight: 10,
+          //marginRight: 10,
+          
           events: {
               load: function () {
                   console.log('xxxx topsChart events:')
@@ -55,7 +57,7 @@ $(document).ready(function() {
                       /* Exit the function: */
                       return;
   
-                  }, 61*1000);  // update everython 10 seconds
+                  }, 11*1000);  // update everython 10 seconds
               }
           }
       },
@@ -65,36 +67,64 @@ $(document).ready(function() {
       },
   
       title: {
-          text: 'SPY real-time'
+          text: 'Real-time ticks'
       },
   
       xAxis: {
           type: 'datetime',
           tickPixelInterval: 150
       },
-  
-      yAxis: {
-          title: {
-              text: 'Value'
+
+      yAxis: [{
+          // Primary yAxis
+          labels: {
+            format: '{value} °C',
+            style: {
+                color: Highcharts.getOptions().colors[1]
+            }
           },
-          plotLines: [{
-              value: 0,
-              width: 1,
-              color: '#808080'
-          }]
-      },
-  
+          title: {
+            text: 'SPY',
+            style: {
+                color: Highcharts.getOptions().colors[1]
+            }
+          }        
+        },
+        { // Secondary yAxis
+          title: {
+            text: 'AAPL',
+            style: {
+                color: Highcharts.getOptions().colors[0]
+            }
+          },
+          labels: {
+            format: '{value} °F',
+            style: {
+                color: Highcharts.getOptions().colors[0]
+            }
+          },
+          opposite: true        
+        }
+      ],
+
       tooltip: {
-          headerFormat: '<b>{series.name}</b><br/>',
-          pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.2f}'
+        shared: true,
+        headerFormat: '<b>{series.name}</b><br/>',
+        pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.2f}'
       },
   
       legend: {
         layout: 'vertical',
-        align: 'right',
-        verticalAlign: 'middle'
+        align: 'left',
+        x: 120,
+        verticalAlign: 'top',
+        y: 100,
+        floating: true,
+        backgroundColor:
+            Highcharts.defaultOptions.legend.backgroundColor || // theme
+            'rgba(255,255,255,0.25)'
       },
-  
+
       exporting: {
           enabled: true
       },
@@ -103,15 +133,16 @@ $(document).ready(function() {
       series: [
       {
         name: 'AAPL',
-        data: [[(new Date()).getTime(), 300.09]]
+        yAxis: 1,
+        data: [[(new Date()).getTime(), 380.09]]
       },
       {
         name: 'SPY',
-        data: [[(new Date()).getTime(), 300.01]]
+        data: [[(new Date()).getTime(), 310.01]]
       },    
       ]
   
-  }); // tickTops
+  }); // tops
     
   
   // pnl chart
@@ -817,8 +848,8 @@ $(document).ready(function() {
                         // parse the last tick:
                         var rdata = JSON.parse(this.response)
                         console.log('minutebar ajax response x:')
-                        console.log(rdata)
-                        console.log('xxxx minute_data:')
+                        //console.log(rdata)
+                        //console.log('xxxx minute_data:')
                         //console.log(rdata.minute_data)
 
                         var minute_obj = JSON.parse(rdata.minute_data)
