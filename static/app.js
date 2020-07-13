@@ -403,7 +403,7 @@ $(document).ready(function() {
           index: 'vwap',
           //render: renderPriceFn,
           render: function(o) {
-              o.value = (o.value).toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+              //o.value = (o.value).toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
               //o.value = '$$' + (o.value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
               return o;
           }
@@ -958,7 +958,152 @@ $(document).ready(function() {
     }
   });
   
+  // An application can open a connection on multiple namespaces, and
+  // Socket.IO will multiplex all those connections on a single
+  // physical channel. If you don't care about multiple channels, you
+  // can set the namespace to an empty string.
+
+  // Use a "/test" namespace.
+  namespace = '/test2';
+
+  // Connect to the Socket.IO server.
+  // The connection URL has the following format:
+  //     http[s]://<domain>:<port>[/<namespace>]
+  console.log('xxxx 0000 socket url:')
+  console.log(location.protocol + '//' + document.domain + ':' + location.port + namespace)
+
+  // KICK OF THE BACKGROUND THREAD IN SOCKETIO
+  var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+
+  // Event handler for new connections.
+  // The callback function is invoked when a connection with the
+  // server is established.
+  socket.on('connect', function() {
+    socket.emit('my_event', {data: 'I\'m connected!'});
+  });
+
+  // Interval function that tests message latency by sending a "ping"
+  // message. The server then responds with a "pong" message and the
+  // round trip time is measured.
+  var ping_pong_times = [];
+  var start_time;
+  var s = '[';
+  window.setInterval(function() {
+    start_time = (new Date).getTime();
+    socket.emit('my_ping');
+    
+    // DO SOMETHING HERE -
+  }, 30000);
+
+  // Handler for the "pong" message. When the pong is received, the
+  // time from the ping is stored, and the average of the last 30
+  // samples is average and displayed.
+  socket.on('my_pong', function() {
+    var latency = (new Date).getTime() - start_time;
+    ping_pong_times.push(latency);
+      ping_pong_times = ping_pong_times.slice(-10); // keep last 30 samples
+      var sum = 0;
+      for (var i = 0; i < ping_pong_times.length; i++)
+        sum += ping_pong_times[i];
+
+      $('#ping-pong').text(Math.round(10 * sum / ping_pong_times.length) / 10);
+      $('#latency').text(ping_pong_times.join(", "));
+  });
+
+
+  // Event handler for server sent data.
+  // The callback function is invoked whenever the server emits data
+  // to the client. The data is then displayed in the "Received"
+  // section of the page.
+  // var signal_hist = [];
+  socket.on('my_response', function(msg) {
+      // show a flashing banner -
+      
+      // $('#log').html(msg.signals_html);
+      // $('#log').append('<br>' + $('<div/>').text('positions allowed #' + msg.positions_allowed).html());
+      console.log('xxxx alerts')
+      console.log(msg.alerts)
+      $('#alerts').text(msg.alerts).html();
+
+      $('#log').text('positions allowed #' + msg.positions_allowed).html();
+      $('#debug').text(priceChart.series);
+
+
+      $('#signals_rank_long').html(msg.signals_rank_long);
+      $('#signals_rank_short').html(msg.signals_rank_short);
+      $('#sorted_pnl').html(msg.sorted_pnl);
+
+      $('#orders_hist_html').html(msg.orders_hist_html);      
+      $('#live_positions_html').html(msg.live_positions_html);
+
+      // update grid
+      signalGrid.setTitle(msg.time)
+
+      if (typeof msg.signal !== 'undefined') {
+        var dobj = JSON.parse(msg.signal)
+
+        if (dobj.length > 0) {  
+          // var grid = FancyGrid.get('test');
+          signalGrid.setData(dobj)
+          signalGrid.update()
+
+          //signalGrid.flashRow(1);
+        }
+        else {
+          // update title ONLY -
+          // last_update_time = Date.parse(signalGrid.getTitle())
+          // time_passed = Date.parse(msg.time) - last_update_time
+          // signalGrid.updateSubtitle(str(time_passed))
+        }
+      }
+
+      if (typeof msg.summary !== 'undefined') {
+          console.log('xxxx: msg.summary:')
+          //console.log(msg.summary)
+
+          summary_data = JSON.parse(msg.summary)
+          //summary_data2 = summary_data.slice(summary_data.length-3, summary_data.length)
+          //console.log(summary_data2)
+
+          summaryGrid.setData(summary_data)
+          //summaryGrid.flashRow(5)
+          summaryGrid.update()
+      }
+
+  });
+
   
+  // COMMAND
+  socket.on('my_info', function(msg) {
+    // show a flashing banner -
+
+    console.log('xxxx info:')
+    console.log(msg)
+
+    $('#info').text(JSON.stringify(msg)).html();
+    //$('#info').text(JSON.parse(msg.config)).html();
+  });
+
+  // Handlers for the different forms in the page.
+  // These accept data from the user and send it to the server in a
+  // variety of ways
+  $('form#emit').submit(function(event) {
+    socket.emit('my_info', {data: $('#emit_data').val()});
+    return false;
+  });
+  $('form#broadcast').submit(function(event) {
+    socket.emit('my_broadcast_event', {data: $('#broadcast_data').val()});
+    return false;
+  });
+
+  $('form#disconnect').submit(function(event) {
+    socket.emit('disconnect_request');
+    return false;
+  });
+
+}); // eod-of-documary.ready()
+
+
 // global functions -
 var renderChangesFn = function(o) {
   //console.log('yyyy: ')
@@ -1065,155 +1210,5 @@ data: [
   { x: 68.6, y: 20, z: 16, name: 'RU', country: 'Russia' },
 ]
 }]
-
-  
-  // An application can open a connection on multiple namespaces, and
-  // Socket.IO will multiplex all those connections on a single
-  // physical channel. If you don't care about multiple channels, you
-  // can set the namespace to an empty string.
-
-  // Use a "/test" namespace.
-  namespace = '/test2';
-
-  // Connect to the Socket.IO server.
-  // The connection URL has the following format:
-  //     http[s]://<domain>:<port>[/<namespace>]
-  console.log('xxxx 0000 socket url:')
-  console.log(location.protocol + '//' + document.domain + ':' + location.port + namespace)
-
-  // KICK OF THE BACKGROUND THREAD IN SOCKETIO
-  var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
-
-  // Event handler for new connections.
-  // The callback function is invoked when a connection with the
-  // server is established.
-  socket.on('connect', function() {
-    socket.emit('my_event', {data: 'I\'m connected!'});
-  });
-
-  // Interval function that tests message latency by sending a "ping"
-  // message. The server then responds with a "pong" message and the
-  // round trip time is measured.
-  var ping_pong_times = [];
-  var start_time;
-  var s = '[';
-  window.setInterval(function() {
-    start_time = (new Date).getTime();
-    socket.emit('my_ping');
-    
-    // DO SOMETHING HERE -
-  }, 30000);
-
-  // Handler for the "pong" message. When the pong is received, the
-  // time from the ping is stored, and the average of the last 30
-  // samples is average and displayed.
-  socket.on('my_pong', function() {
-    var latency = (new Date).getTime() - start_time;
-    ping_pong_times.push(latency);
-      ping_pong_times = ping_pong_times.slice(-10); // keep last 30 samples
-      var sum = 0;
-      for (var i = 0; i < ping_pong_times.length; i++)
-        sum += ping_pong_times[i];
-
-      $('#ping-pong').text(Math.round(10 * sum / ping_pong_times.length) / 10);
-      $('#latency').text(ping_pong_times.join(", "));
-  });
-
-
-  // Event handler for server sent data.
-  // The callback function is invoked whenever the server emits data
-  // to the client. The data is then displayed in the "Received"
-  // section of the page.
-  // var signal_hist = [];
-  socket.on('my_response', function(msg) {
-      // show a flashing banner -
-      
-      // $('#log').html(msg.signals_html);
-      // $('#log').append('<br>' + $('<div/>').text('positions allowed #' + msg.positions_allowed).html());
-      console.log('xxxx alerts')
-      console.log(msg.alerts)
-      $('#alerts').text(msg.alerts).html();
-
-      $('#log').text('positions allowed #' + msg.positions_allowed).html();
-      $('#debug').text(priceChart.series);
-
-
-      $('#signals_rank_long').html(msg.signals_rank_long);
-      $('#signals_rank_short').html(msg.signals_rank_short);
-      $('#sorted_pnl').html(msg.sorted_pnl);
-
-      $('#orders_hist_html').html(msg.orders_hist_html);      
-      $('#live_positions_html').html(msg.live_positions_html);
-
-      // update grid
-      signalGrid.setTitle(msg.time)
-
-      if (typeof msg.signal !== 'undefined') {
-        var dobj = JSON.parse(msg.signal)
-
-        if (dobj.length > 0) {  
-          // var grid = FancyGrid.get('test');
-          signalGrid.setData(dobj)
-          signalGrid.update()
-
-          //signalGrid.flashRow(1);
-        }
-        else {
-          // update title ONLY -
-          // last_update_time = Date.parse(signalGrid.getTitle())
-          // time_passed = Date.parse(msg.time) - last_update_time
-          // signalGrid.updateSubtitle(str(time_passed))
-        }
-      }
-
-      // console.log('yyyy')
-      // console.log(typeof(grid.getData()))
-
-      if (typeof msg.summary !== 'undefined') {
-          //console.log('xxxx: '+msg.time)
-
-          summary_data = JSON.parse(msg.summary)
-          // console.log(msg.summary)
-          // console.log(summary_data)
-
-          summaryGrid.setData(summary_data)
-          //summaryGrid.flashRow(5)
-          summaryGrid.update()
-
-          //$('#container').text(JSON.stringify(grid2.getData()))
-      }
-
-  });
-
-  
-  // COMMAND
-  socket.on('my_info', function(msg) {
-    // show a flashing banner -
-
-    console.log('xxxx info:')
-    console.log(msg)
-
-    $('#info').text(JSON.stringify(msg)).html();
-    //$('#info').text(JSON.parse(msg.config)).html();
-  });
-
-  // Handlers for the different forms in the page.
-  // These accept data from the user and send it to the server in a
-  // variety of ways
-  $('form#emit').submit(function(event) {
-    socket.emit('my_info', {data: $('#emit_data').val()});
-    return false;
-  });
-  $('form#broadcast').submit(function(event) {
-    socket.emit('my_broadcast_event', {data: $('#broadcast_data').val()});
-    return false;
-  });
-
-  $('form#disconnect').submit(function(event) {
-    socket.emit('disconnect_request');
-    return false;
-  });
-
-});
 
 // EOF

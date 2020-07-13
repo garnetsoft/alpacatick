@@ -1,5 +1,8 @@
 "# alpaca data" 
 
+https://bost.ocks.org/mike/bubble-map/
+
+
 def wavg(val_col_name,wt_col_name):
     def inner(group):
         return (group[val_col_name] * group[wt_col_name]).sum() / group[wt_col_name].sum()
