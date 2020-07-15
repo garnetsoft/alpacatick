@@ -38,7 +38,7 @@ $(document).ready(function() {
                             console.log('topsChart rdata x:')
                             //console.log(rdata)
   
-                            var data = JSON.parse(rdata.tops_data20)
+                            var data = JSON.parse(rdata.tops_data)
                             console.log('topsChart data:')
                             //console.log(data)
 
@@ -78,33 +78,33 @@ $(document).ready(function() {
       yAxis: [{
           // Primary yAxis
           labels: {
-            format: '{value:.2f} °C',
-            style: {
-                color: Highcharts.getOptions().colors[1]
-            }
-          },
-          title: {
-            text: 'SPY',
-            style: {
-                color: Highcharts.getOptions().colors[1]
-            }
-          }        
-        },
-        { // Secondary yAxis
-          title: {
-            text: 'AAPL',
-            style: {
-                color: Highcharts.getOptions().colors[0]
-            }
-          },
-          labels: {
             format: '{value:.2f} °F',
             style: {
                 color: Highcharts.getOptions().colors[0]
             }
           },
-          opposite: true        
-        }
+          title: {
+            text: 'AAPL',
+            style: {
+                color: Highcharts.getOptions().colors[0]
+            }
+          }        
+        },
+        { // Secondary yAxis
+          title: {
+            text: 'SPY',
+            style: {
+                color: Highcharts.getOptions().colors[1]
+            }
+          },
+          labels: {
+            format: '{value:.2f} °C',
+            style: {
+                color: Highcharts.getOptions().colors[1]
+            }
+          },
+          opposite: true
+        },
       ],
 
       tooltip: {
@@ -132,15 +132,25 @@ $(document).ready(function() {
       // try multiple series -
       series: [
       {
-        name: 'AAPL',
-        yAxis: 1,
-        data: [[(new Date()).getTime(), 380.09]]
-      },
-      {
         name: 'SPY',
         data: [[(new Date()).getTime(), 310.01]]
       },    
-      ]
+      {
+        name: 'AAPL',
+        yAxis: 1,
+        data: [[(new Date()).getTime(), 380.01]]
+      },
+      {
+        name: 'SPY2',
+        data: [[(new Date()).getTime(), 310.09]]
+      },    
+      {
+        name: 'AAPL2',
+        yAxis: 1,
+        data: [[(new Date()).getTime(), 380.09]]
+      },
+
+    ]
   
   }); // tops
     
@@ -160,11 +170,11 @@ $(document).ready(function() {
                 //var series = this.series[0];
                 var series = this.series;
                 var mdata = []
-                var data_series = {'XXX': [], 'AAPL': []}
+                var data_series = {'pnl': [], 'OpeningBalance': []}
 
                 setInterval(function () {
                     console.log('xxxx mychart series')
-                    console.log(series)
+                    //console.log(series)
 
                     // Make an HTTP request
                     // document.getElementById('dynamic_content').innerText = new Date().toUTCString();
@@ -185,8 +195,8 @@ $(document).ready(function() {
 
                           // parse the last tick:
                           var rdata = JSON.parse(this.response)
-                          console.log('rdata pnl x:')
-                          console.log(rdata)
+                          //console.log('rdata pnl x:')
+                          //console.log(rdata)
 
                           var data = JSON.parse(rdata.data)
                           console.log('rdata pnl: ' + data.length)
@@ -209,9 +219,10 @@ $(document).ready(function() {
                             }
                           }
 
+                          // update opening balance with the same init value
                           if (mdata.length > 0) {
                             console.log('xxxx: mdata: ' + mdata)
-                            init_series = data_series['AAPL']
+                            init_series = data_series['OpeningBalance']
                             init_series.push([(new Date()).getTime(), mdata[0][1] ])
                             //console.log(init_series)
 
@@ -313,11 +324,11 @@ $(document).ready(function() {
     // try multiple series -
     series: [
       {
-        name: 'XXX',
+        name: 'pnl',
         data: [[(new Date()).getTime(), 50000.09]]
       },
       {
-        name: 'AAPL',
+        name: 'OpeningBalance',
         data: [[(new Date()).getTime(), 50000.01]]
       },    
     ]
@@ -691,7 +702,7 @@ $(document).ready(function() {
                     /* Exit the function: */
                     return;
   
-                }, 63*1000);
+                }, 33*1000);
             }
           } // end events  
       },
@@ -834,7 +845,7 @@ $(document).ready(function() {
           load: function () {
               // set up the updating of the chart each second
               var series = this.series;
-              console.log(series)
+              //console.log(series)
 
               setInterval(function () {
                   // Make an HTTP request
@@ -872,7 +883,7 @@ $(document).ready(function() {
                   /* Exit the function: */
                   return;
 
-              }, 67*1000);
+              }, 37*1000);
           }
         },
 
@@ -1023,8 +1034,8 @@ $(document).ready(function() {
       // $('#log').append('<br>' + $('<div/>').text('positions allowed #' + msg.positions_allowed).html());
       console.log('xxxx alerts')
       console.log(msg.alerts)
-      $('#alerts').text(msg.alerts).html();
 
+      $('#alerts').text(msg.alerts).html();
       $('#log').text('positions allowed #' + msg.positions_allowed).html();
       $('#debug').text(priceChart.series);
 
@@ -1049,12 +1060,6 @@ $(document).ready(function() {
 
           //signalGrid.flashRow(1);
         }
-        else {
-          // update title ONLY -
-          // last_update_time = Date.parse(signalGrid.getTitle())
-          // time_passed = Date.parse(msg.time) - last_update_time
-          // signalGrid.updateSubtitle(str(time_passed))
-        }
       }
 
       if (typeof msg.summary !== 'undefined') {
@@ -1062,9 +1067,6 @@ $(document).ready(function() {
           //console.log(msg.summary)
 
           summary_data = JSON.parse(msg.summary)
-          //summary_data2 = summary_data.slice(summary_data.length-3, summary_data.length)
-          //console.log(summary_data2)
-
           summaryGrid.setData(summary_data)
           //summaryGrid.flashRow(5)
           summaryGrid.update()
@@ -1081,12 +1083,9 @@ $(document).ready(function() {
     console.log(msg)
 
     $('#info').text(JSON.stringify(msg)).html();
-    //$('#info').text(JSON.parse(msg.config)).html();
   });
 
-  // Handlers for the different forms in the page.
-  // These accept data from the user and send it to the server in a
-  // variety of ways
+  // other commands
   $('form#emit').submit(function(event) {
     socket.emit('my_info', {data: $('#emit_data').val()});
     return false;
@@ -1097,6 +1096,7 @@ $(document).ready(function() {
   });
 
   $('form#disconnect').submit(function(event) {
+    // SHUTDOWN TRADING -
     socket.emit('disconnect_request');
     return false;
   });
@@ -1148,8 +1148,6 @@ var renderAtrFn = function(o) {
 
 
 var renderCloseFn = function(o) {
-  //console.log('yyyy: ')
-  //console.log(o.data)
 
   if (o.data.close < o.data.l2dv) {
     o.style = {
@@ -1172,43 +1170,52 @@ var renderCloseFn = function(o) {
   return o;
 };
 
+
 function formatNumber(num) {
-return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+  return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
 }
 
 function currencyFormat(num) {
-return '$' + num.toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+  return '$' + num.toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+}
+
+function formatToUnits(number, precision) {
+  const abbrev = ['', 'k', 'M', 'B', 't'];
+  const unrangifiedOrder = Math.floor(Math.log10(Math.abs(number)) / 3)
+  const order = Math.max(0, Math.min(unrangifiedOrder, abbrev.length -1 ))
+  const suffix = abbrev[order];
+
+  return (number / Math.pow(10, order * 3)).toFixed(precision) + suffix;
 }
 
 
-
 var signal_init = [
-{"id":476, "count": 0, "qtm": "2020-05-21 19:26:13.758", "sym":"AAPL", "price":[125.78,125.85,125.91,125.92,125.92],"src":"http://ny529s.com/logo/AAPL.png","volume":86180.0, "ps":[2, 1, 5, 5], "tick": 7.7, "signal": "Long"},
-{"id":1001, "count": 1,"qtm": "2020-05-21 19:26:13.758", "sym":"XOM",  "price":[85.05,85.135,85.135,85.075,85.075], "src":"http://ny529s.com/logo/XOM.png"," volume":79866.0, "ps":[2, 5, 1, 1], "tick": 8.8, "signal": "Short"}
+  {"id":476, "count": 0, "qtm": "2020-05-21 19:26:13.758", "sym":"AAPL", "price":[125.78,125.85,125.91,125.92,125.92],"src":"http://ny529s.com/logo/AAPL.png","volume":86180.0, "ps":[2, 1, 5, 5], "tick": 7.7, "signal": "Long"},
+  {"id":1001, "count": 1,"qtm": "2020-05-21 19:26:13.758", "sym":"XOM",  "price":[85.05,85.135,85.135,85.075,85.075], "src":"http://ny529s.com/logo/XOM.png"," volume":79866.0, "ps":[2, 5, 1, 1], "tick": 8.8, "signal": "Short"}
 ]
 
 
 // sym	qtm	n	open	mn	mu	md	mx	dv	vwap	close	chg	volume	l2dv	r2dv, ps
 var summary_init = [
-{"id": 0, "sym":"xxx", "qtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[5, 4, 3, 2, 1] , "pbox":[5, 4, 3, 2, 1], "ps":[2, 1, 5, 4] }, 
-{"id": 7, "sym":"yyy", "qtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[1, 2, 3, 4, 5] , "pbox":[1, 2, 3, 4, 5], "ps":[2, 1, 5, 4] }, 
+  {"id": 0, "sym":"xxx", "qtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[5, 4, 3, 2, 1] , "pbox":[5, 4, 3, 2, 1], "ps":[2, 1, 5, 4] }, 
+  {"id": 7, "sym":"yyy", "qtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[1, 2, 3, 4, 5] , "pbox":[1, 2, 3, 4, 5], "ps":[2, 1, 5, 4] }, 
 ];
 
 
 var series2 = [{
-name: 'XXXXX',
-data: [43934, 52503, 57177, 69658, 97031, 119931, 137133, 154175]
-}, {
-name: 'ZZZZZ',
-data: [12908, 5948, 8105, 11248, 8989, 11816, 18274, 18111]
+  name: 'XXXXX',
+  data: [43934, 52503, 57177, 69658, 97031, 119931, 137133, 154175]
+  }, {
+  name: 'ZZZZZ',
+  data: [12908, 5948, 8105, 11248, 8989, 11816, 18274, 18111]
 }];
 
 var bubble = [{
-data: [
-  { x: 71, y: 93.2, z: 24.7, name: 'UK', country: 'United Kingdom' },
-  { x: 69.2, y: 57.6, z: 10.4, name: 'IT', country: 'Italy' },
-  { x: 68.6, y: 20, z: 16, name: 'RU', country: 'Russia' },
-]
+  data: [
+    { x: 71, y: 93.2, z: 24.7, name: 'UK', country: 'United Kingdom' },
+    { x: 69.2, y: 57.6, z: 10.4, name: 'IT', country: 'Italy' },
+    { x: 68.6, y: 20, z: 16, name: 'RU', country: 'Russia' },
+  ]
 }]
 
 // EOF

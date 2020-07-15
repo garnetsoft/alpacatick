@@ -100,7 +100,7 @@ def get_account_info():
     positions = api.list_positions()
     notional = 0.0
     for i, position in enumerate(positions):
-        print(f'$$$$ {i} pos: {position}')
+        # print(f'$$$$ {i} pos: {position}')
         notional += float(position.market_value)
     print(f'$$$$ total USD: {notional}')
 
@@ -587,21 +587,24 @@ def get_tick_update2():
         return {'error:': 'not connected to kdb'}
     
     try:
-        query2 = '0!select tm:qtm, price:lastSalePrice by sym:symbol from  update qtm:"j"$(lastSaleTimez-1970.01.01D)%1000000, qtmz:"z"$lastSaleTimez from select from iextops where symbol in `SPY`AAPL, lastSaleTimez.minute>=13:30'
-        df = q(query2)
-        print(f'xxxx tickupdate2: {query2}, df:')
-        #print(df.head())
-
-        #tops_data = [{'name':row.sym.decode('utf-8'), 'data':list(map(list, zip(row['tm'].astype(int), row['price'])))} for i, row in df.iterrows()]
+        query = '0!select tm:qtm, price:lastSalePrice by sym:symbol from  update qtm:"j"$(lastSaleTimez-1970.01.01D)%1000000, qtmz:"z"$lastSaleTimez from  select from iextops where symbol in `SPY`AAPL, lastSaleTimez.minute>=13:30'
+        df = q(query)
+        print(f'xxxx tickupdate2: {query}, df:')
+    
         tops_data = [{'name':row.sym.decode('utf-8'), 'data':list(map(list, zip(row['tm'], row['price'])))} for i, row in df.iterrows()]
-        #print(f'xxxx tickupdate2: {query2}, tops_data: {tops_data} ')
+        #print(f'xxxx tickupdate2: {query}, tops_data: {tops_data} ')
 
-        #tops_data20 = json.dumps(tops_data)
-        #print(f'xxxx tickupdate2: {query2}, tops_data20: {tops_data20} ')        
+
+        query2 = 'update sym:`AAPL2`SPY2 from  0!select tm:tms%1000000, price by sym from update wtm:"p"$1970.01.01D+tms from  select by qtm.minute, sym from trade where sym in `SPY`AAPL, qtm.minute>=13:30'
+        df2 = q(query2)
+        ticks_data = [{'name':row.sym.decode('utf-8'), 'data':list(map(list, zip(row['tm'], row['price'])))} for i, row in df2.iterrows()]
+        #print(f'xxxx tickupdate2: {query2}, ticks_data: {ticks_data} ')        
+        # test data
         tops_json = '[{"name": "AAPL", "data": [[1592323719865, 349.72], [1592323778164, 349.75], [1592323856421, 349.365], [1592323917619, 349.5], [1592323975537, 350.0]]}, {"name": "SPY", "data": [[1592323735266, 311.54], [1592323797892, 311.59], [1592323853178, 311.44], [1592323919910, 311.65], [1592323978168, 311.92]]}]'
-        #print(f'xxxx tickupdate2: {query2}, tops_json: {tops_json} ')
-        
-        return {'msg_type': 'tick_update2', 'tops_data': tops_json, 'tops_data20': json.dumps(tops_data) }
+
+
+        return {'msg_type': 'tick_update2', 'ticks_data': tops_json, 'tops_data': json.dumps(tops_data+ticks_data) }
+        #return {'msg_type': 'tick_update2', 'ticks_data': tops_json, 'tops_data': json.dumps(ticks_data) }
 
     except Exception as e:
         print(f'ERROR: in querying Kdb tickupdate, {e}')
@@ -624,7 +627,7 @@ def get_pnl_update():
         # get total unrealized pnl
         #int(pd.to_datetime(datetime.now()).value / 1000000)
         #pnl_data = [{'sym': 'XXX', 'pnl': [int(datetime.now().timestamp()*1000), float(acct.portfolio_value)] }]
-        pnl_data = [{'sym': 'XXX', 'pnl': [int(datetime.now().timestamp()*1000), float(acct.portfolio_value)] }] 
+        pnl_data = [{'sym': 'pnl', 'pnl': [int(datetime.now().timestamp()*1000), float(acct.portfolio_value)] }] 
         #, {'sym': 'AAPL', 'pnl': [int(pd.to_datetime(datetime.now()).value / 1000000), float(acct.equity)] }]
         print(f'xxxx pnlupdate: {pnl_data}')
         
@@ -828,7 +831,8 @@ def calc_pnl(g, long_or_short):
             total_pnl += (exit_price - entry_price) * size * long_or_short
 
     # print(f'$$$$ total_pnl: {total_pnl}, {size}')
-    return total_pnl
+    # float("{:.2f}".format(total_pnl)) 
+    return float("{:.2f}".format(total_pnl))
 
 
 def get_agg_pnl(df):

@@ -26,7 +26,7 @@ $(document).ready(function() {
                           // override the chart with entire new series
                           console.log('xxxx stats_data:')
                           var stats_obj = JSON.parse(rdata.stats_data)
-                          console.log(stats_obj)
+                          //console.log(stats_obj)
 
                           //bubble_series[0].setData(stats_obj[0].data)
                           bubble_series[1].setData(stats_obj[1].data)

@@ -73,8 +73,7 @@
     <p>Average ping/pong latency: <b><span id="ping-pong"></span> (ms)</b></p>
     <p>latency details: <b><span id="latency"></span></b></p>
 
-    <h2>Command: </h2>
-    <hr>
+    <hr><h2>Command: </h2>
     <div id="info" class="alert alert-info" role="alert"></div>
     <br>
     <form id="emit" method="POST" action='#'>
@@ -85,23 +84,16 @@
         <input type="text" name="broadcast_data" id="broadcast_data" placeholder="Message">
         <input type="submit" value="Halt Trading">
     </form>
-
     <form id="disconnect" method="POST" action="#">
         <input type="submit" value="Disconnect">
     </form>
 
-    <hr>
-    <div id="alerts" class="alert alert-danger" role="alert"></div>
-    <div id="log">log:</div>
-    <h3>debug:</h3>
-    <div id="debug"></div>
-
+    <hr><div id="alerts" class="alert alert-danger" role="alert"></div>
+    <hr><div id="log">log:</div>
+    <hr><h3>debug:</h3><div id="debug"></div>
+    <hr><div id="priceChart"></div>
     <!-------------------------------------------->
-    <div id="priceChart"></div>    
-
-    <hr>
-    <h2>Real-time chart:</h2>
-    <div id="topsChart"></div>
+    <hr><h2>Real-time chart:</h2><div id="topsChart"></div>
     
     <hr>
     <div class="row">
@@ -115,11 +107,9 @@
       <div id="sectorChart" class="col"></div>
     </div>
 
-    <hr>
-    <div id="mychart"></div>
+    <hr><div id="mychart"></div>
 
-    <hr>
-    <h2>Long/Short ranking: </h2>
+    <hr><h2>Long/Short ranking: </h2>
     <hr>
     <div class="row">
         <div class="col">
@@ -131,6 +121,7 @@
             <div id="signals_rank_short"></div>
         </div>
     </div>
+
     <hr>
     <div class="row">
         <div class="col">
@@ -139,23 +130,14 @@
         </div>
     </div>
 
-    <hr>
-    <h2>Live positions:</h2>
-    <div id="live_positions_html"></div>
+    <hr><h2>Signals - $$$:</h2><div id="signal"></div>
 
-    <hr>
-    <strong><div id="orders_hist_html"></div></strong>
+    <hr><h2>Live positions:</h2><div id="live_positions_html"></div>
 
-    <hr>
-    <h2>Signals - $$$:</h2>
-    <div id="signal"></div>
+    <hr><strong><div id="orders_hist_html"></div></strong>
 
-    <hr>
-    <h2>Summary:</h2>
-    <div id="summary"></div>
+    <hr><h2>Summary:</h2><div id="summary"></div>
 
-
-    <!-- end container -->
-    </div>
+    </div> <!-- end container -->
 </body>
 </html>
