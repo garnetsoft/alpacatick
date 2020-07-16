@@ -832,7 +832,7 @@ def calc_pnl(g, long_or_short):
 
     # print(f'$$$$ total_pnl: {total_pnl}, {size}')
     # float("{:.2f}".format(total_pnl)) 
-    return float("{:.2f}".format(total_pnl))
+    return float("{:.2f}".format(total_pnl)) 
 
 
 def get_agg_pnl(df):
@@ -862,6 +862,7 @@ def get_agg_pnl(df):
     print(f'$$$$ total_pnl: {long_pnl+short_pnl}, long_pnl: {long_pnl}, short_pnl: {short_pnl}, shared_traded: {np.sum(df.size)}')
     #print(sorted(pnl_map.items(), key=lambda x: x[1], reverse=True))
     
+    # float("{:.2f}".format(orig_float)) 
     return sorted(pnl_map.items(), key=lambda x: x[1], reverse=True)
 
 
@@ -877,7 +878,7 @@ def background_thread():
 
     try:
         while True:
-            print(f'################################# background thread running {datetime.now()} ###############')
+            print(f'{datetime.now()}################################# background thread running {count} ###############')
 
             # set update period
             socketio.sleep(13)
@@ -895,6 +896,7 @@ def background_thread():
             #print(stats_html)
 
             # check ACTIVE trading period -
+            bday = datetime.today().date().strftime('%m%d%Y')
             utc_time = datetime.utcnow()
             cur_hr, cur_mm = utc_time.hour, utc_time.minute
             print(f'XXXX DEBUG: UTC_TIME: {utc_time}, {cur_hr}, {cur_mm}')
@@ -922,6 +924,11 @@ def background_thread():
                 signals_ui = signals_df[['count', 'sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal']]
                 print('xxxx signals_ui: ')
                 print(signals_ui)
+
+                ### write to signal_ui_yyyyMMDD.csv file -
+                with open(f'/data/signals_ui_{bday}.csv', 'a') as f:
+                    f.to_csv(signals_ui, header=False)
+
 
                 signals_hist.append(signals_df)
                 # keep just the last 5 signals
@@ -960,7 +967,7 @@ def background_thread():
                 
                 ## save to file
                 if orders_hist_len < len(orders_hist_df):
-                    orders_hist_df.to_csv('/tmp/alpaca_paperlive_{}.csv'.format(datetime.today().date().strftime('%m%d%Y')))
+                    orders_hist_df.to_csv(f'/data/alpaca_paperlive_trades_{bday}.csv')
                     orders_hist_len = len(orders_hist_df)
                     print(orders_hist_df)
 
@@ -1055,7 +1062,7 @@ def background_thread():
 
                             }, namespace='/test2')
 
-            print(f'XXXXXXXXXXXXXXXXXXXXXXXXxxxxxxxxxxxxxxxxxxxxxxxxxxxxx DONE. {datetime.now()} xxxxxxxxxxxxxx')
+            print(f'{datetime.now()}XXXXXXXXXXXXXXXXXXXXXXXXxxxxxxxxxxxxxxxxxxxxxxxxxxxxx DONE. {count} xxxxxxxxxxxxxx')
             print('\n')
 
         # end while
@@ -1110,6 +1117,16 @@ def update_configs(**kwargs):
 #update_configs(**{'key':'value', 'haha':'hehe'})    
 update_configs(**{})
 alerts = {'SPY': 'THIS IS A TEST ALERT.'}
+
+print('-- Display full Dataframe without truncation')
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', -1)
+
+
+# write all signals_ui df to file for backtest -
+
 
 #### main ####
 if __name__ == '__main__':
