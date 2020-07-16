@@ -927,7 +927,7 @@ def background_thread():
 
                 ### write to signal_ui_yyyyMMDD.csv file -
                 with open(f'/data/signals_ui_{bday}.csv', 'a') as f:
-                    f.to_csv(signals_ui, header=False)
+                    signals_ui.to_csv(f, header=False)
 
 
                 signals_hist.append(signals_df)
