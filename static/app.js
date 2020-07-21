@@ -79,7 +79,7 @@ $(document).ready(function() {
             index: 'vwap',
             //render: renderPriceFn,
             render: function(o) {
-                o.value = (o.value).toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+                //o.value = (o.value).toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
                 //o.value = '$$' + (o.value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
                 return o;
             }

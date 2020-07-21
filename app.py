@@ -265,7 +265,8 @@ def background_thread():
 
 
         # publish kdb upd time:
-        tm = q("max exec qtm from select by sym from trade")
+        #tm = q("max exec lastUpdatedz from select by sym from iextops")
+        tm = q('max exec lastSaleTimez from update lastSaleTimez:"p"$1970.01.01D+lastSaleTime*1000000 select by symbol from iextops2')
         print(f'count: {count}, qtime: {tm}')
 
         long_signals_rank = sorted(long_signals_count_dict.items(), key=lambda x: x[1], reverse=True) 
@@ -354,9 +355,9 @@ print('xxxx connect to Kdb...')
 # create connection object
 #q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
 # impl reconnect -
-q = qconnection.QConnection(host='aq101', port=6001, pandas=True)
+q = qconnection.QConnection(host='localhost', port=6001, pandas=True)
 
 
 #### main ####
 if __name__ == '__main__':
-    socketio.run(app, debug=False, host='0.0.0.0')
+    socketio.run(app, debug=False, host='0.0.0.0', port=80)
