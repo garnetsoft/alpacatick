@@ -119,6 +119,8 @@ def load_app_config(config_file):
         raise Exception('Error init/start Services. %s' %e)
 
 
+### load app config
+load_app_config(sys.argv[1])
 
 print('xxxx connect to Kdb...')
 
@@ -134,8 +136,6 @@ cols = ['symbol','sector','securityType','bidPrice','bidSize','askPrice','askSiz
 table = 'iextops2'
 
 
-### API info -
-load_app_config(sys.argv[1])
 
 tickerfile = config['ticker_file']
 tickers = pd.read_csv(tickerfile).ticker.unique()
