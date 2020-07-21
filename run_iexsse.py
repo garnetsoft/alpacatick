@@ -124,7 +124,7 @@ print('xxxx connect to Kdb...')
 
 # create connection object
 #q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
-q = qconnection.QConnection(host='aqanalytics.com', port=6000, pandas=True)
+q = qconnection.QConnection(host=config['kdb_host'], port=int(config['kdb_port']), pandas=True)
 
 q.open()
 print('IPC version:%s %s. Is connected: %s' % (q, q.protocol_version, q.is_connected()))
