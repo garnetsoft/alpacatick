@@ -388,17 +388,24 @@ def test_disconnect():
 
 
 ## ajax callback to provide minute bar data
-@app.route('/sectorbar')
-def get_sector_bar():
-    print(f'xxxx get_sector_bar {q}, {q.is_connected()}')
+@app.route('/pricebar/<sec>')
+def get_sector_bar(sec):
+    print(f'xxxx GET /pricebar/<sec> : {sec}')
 
     if not q.is_connected():
         return {'error:': 'not connected to kdb'}
 
     s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
-    query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'        
-    print(f'xxxx get_sector_bar query: {query}')
-    
+    if s == 'sector':
+        s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
+    elif s == 'dow30':
+        s = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
+    elif s == 'etf':
+        pass
+
+    #query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'
+    query = f'get_price_bar[{s};1]'
+    print(f'xxxx get_price_bar query: {query}')  
     td = datetime.today().date().strftime('%m/%d/%Y')
 
     try:        
@@ -406,36 +413,42 @@ def get_sector_bar():
         df = df.replace(0, np.nan).bfill().ffill()
         df = rebase_series(df)
         data_json = [{"name": s, "data": list(map(list, zip([int(pd.to_datetime(datetime.strptime("{} {}".format(td, str(x)[-8:]), '%m/%d/%Y %H:%M:%S')).value / 1000000) for x in mdata.index], mdata))) } for s, mdata in df.items()]
-        #print(f'XXXX get_sector_bar: {data_json}')
+        #print(f'XXXX get_price_bar: {data_json}')
 
         return {'msg_type': 'minute_bar', 'minute_data': json.dumps(data_json) }
 
     except Exception as e:
-        print(f'ERROR: in querying Kdb get_sector_bar, {e}, query: {query}')
+        print(f'ERROR: in querying Kdb get_price_bar, {e}, query: {query}')
         traceback.print_exc(file=sys.stdout)
 
     return {'error:': 'kdb data not available.', 'query': query}
 
 
-@app.route('/sectorstats')
-def compute_sector_stats():
-    print(f'xxxx compute_sector_stats {q}, {q.is_connected()}')
+@app.route('/pricestats/<sec>')
+def compute_sector_stats(sec):
+    print(f'xxxx GET /pricestats/<sec> : {sec}')
 
     if not q.is_connected():
         return {'error:': 'not connected to kdb'}
-    
-    s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
-    query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'
-    #query = f'exec ({s})#sym!price by tm:qtm from 0!select price:last lastSalePrice by sym:symbol, qtm:lastUpdatedz.minute from iextops where symbol in {s}'
 
-    print(f'xxxx compute_sector_stats query: {query}')
+    s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
+    if s == 'sector':
+        s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
+    elif s == 'dow30':
+        s = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
+    elif s == 'etf':
+        pass
+
+    query = f'get_price_bar[{s};1]'
+    print(f'xxxx get_price_bar query: {query}')  
 
     try:        
         df = q(query)
-        #df = rebase_series(df.bfill()).dropna()
         df = df.replace(0, np.nan).bfill().ffill()
         df = rebase_series(df)
         df_stats = df.describe()
+
+        print(f'xxxx compute pricestats query: {query}')
 
         df_stats.loc['open'] = df.iloc[0]
         df_stats.loc['close'] = df.iloc[-1]
@@ -445,52 +458,6 @@ def compute_sector_stats():
 
         stats_data = [{'name': s, 'x': data['sharpe'], 'y': data['return'], 'z': data['std'], 'country': s} for s, data in  df_stats.items()]
         #print(f'XXXX stats_data: {stats_data}')
-
-        # relative to SPY -
-        spy = df_stats.loc[:,['SPY']]
-        df_stats.loc['return2'] = df_stats.loc['close'] - np.mean(spy.loc['close'])
-        df_stats.loc['sharpe2'] = np.divide(df_stats.loc['return'] - np.mean(spy.loc['return']), df_stats.loc['std'])
-        stats_data2 = [{'name': s, 'x': data['sharpe2'], 'y': data['return2'], 'z': data['std'], 'country': s} for s, data in  df_stats.items()]
-
-        stats_series = [{'group':'Actual', 'data': stats_data}, {'group':'Relative', 'data': stats_data2}]
-
-        return {'msg_type': 'stats_data', 'stats_data': json.dumps(stats_series) }
-
-    except Exception as e:
-        print(f'ERROR: in querying Kdb compute_sector_stats, {e}, query: {query}')
-        traceback.print_exc(file=sys.stdout)
-
-    return {'error:': 'kdb data not available.', 'query': query}
-
-
-@app.route('/statsbar2')
-def compute_minute_stats2():
-    print(f'xxxx compute_minute_stats2 {q}, {q.is_connected()}')
-
-    if not q.is_connected():
-        return {'error:': 'not connected to kdb'}
-    
-    s = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
-    #s = '`SPY`AAPK`GS`XOM`TSLA'
-    print(f'xxxx compute_minute_stats2: {s}')
-
-    try:
-        # query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'
-        #query = f'exec {s}#sym!close by tm:"T"$minute from intraday where sym in {s}'
-        query = f'exec ({s})#sym!price by tm:qtm from 0!select price:last lastSalePrice by sym:symbol, qtm:lastSaleTimez.minute from iextops where lastSaleTimez.minute>=13:30, symbol in {s}'
-        print(f'xxxx statsbar2 query: {query}')
-        
-        df = q(query)
-        #df = rebase_series(df.bfill()).dropna()
-        df = df.replace(0, np.nan).bfill().ffill()
-        df = rebase_series(df)
-        df_stats = df.describe()
-
-        df_stats.loc['open'] = df.iloc[0]
-        df_stats.loc['close'] = df.iloc[-1]
-        df_stats.loc['return'] = df_stats.loc['close'] - 100
-        #df_stats.loc['retdv'] = (df_stats.loc['close'] - 100) / df_stats.loc['std']
-        df_stats.loc['sharpe'] = np.divide(df_stats.loc['mean']-100, df_stats.loc['std'])
 
         spy = df_stats.loc[:,['SPY']]
         df_stats.loc['return2'] = df_stats.loc['close'] - np.mean(spy.loc['close'])
@@ -507,76 +474,11 @@ def compute_minute_stats2():
         return {'msg_type': 'stats_data', 'stats_data': json.dumps(stats_series) }
 
     except Exception as e:
-        print(f'ERROR: in querying Kdb compute_minute_stats2, {e}, query: {query}')
+        print(f'ERROR: in querying Kdb compute pricestats, {e}, query: {query}')
         traceback.print_exc(file=sys.stdout)
 
     return {'error:': 'kdb data not available.', 'query': query}
 
-
-## ajax callback to provide minute bar data
-@app.route('/minutebar')
-def get_minute_bar():
-    print(f'xxxx minutebar {q}, {q.is_connected()}')
-
-    # create minute bar series -
-    # exec (`SPY`AAPL)#sym!price by mm:minute from 0!select last price by sym, 5 xbar qtm.minute from trade where sym in `SPY`AAPL
-    # data_json = [{"name": s, "data": list(map(list, zip([datetime.strptime(str(x)[-8:], '%H:%M:%S') for x in mdata.index], mdata))) } for s, mdata in df.items()]
-
-    if not q.is_connected():
-        return {'error:': 'not connected to kdb'}
-    
-    s = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
-    print(f'xxxx querying minutebar: {s}')
-    td = datetime.today().date().strftime('%m/%d/%Y')
-    #dt2 = datetime.strptime("{} {}".format(td, str(tm)[-8:]), "%m/%d/%Y %H:%M:%S")
-
-    #query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'
-    #query = f'select by 30 xbar tm:tm.minute from  exec {s}#sym!close by tm:"T"$minute from intraday where sym in {s}'
-    query = f'exec ({s})#sym!price by tm:qtm from 0!select price:last lastSalePrice by sym:symbol, qtm:lastSaleTimez.minute from iextops where  lastSaleTimez.minute>=13:30, symbol in {s}'
-    print(f'xxxx minutebar query: {query}')
-
-    try:
-        df = q(query)
-        print('xxxx minute_df:')
-        #print(df.head())
-        df = df.replace(0, np.nan).bfill().ffill()
-        #df = df.replace(0, np.nan).ffill()
-        df = rebase_series(df)
-        print('xxxx minute_df rebased:')
-        print(df.tail())
-
-        #data_json = [{"name": s, "data": list(map(list, zip([datetime.strptime(str(x)[-8:], '%H:%M:%S') for x in mdata.index], mdata))) } for s, mdata in df.items()]
-        data_json = [{"name": s, "data": list(map(list, zip([int(pd.to_datetime(datetime.strptime("{} {}".format(td, str(x)[-8:]), '%m/%d/%Y %H:%M:%S')).value / 1000000) for x in mdata.index], mdata))) } for s, mdata in df.items()]
-        #print(f'XXXX minute_data: {data_json}')
-
-        return {'msg_type': 'minute_bar', 'minute_data': json.dumps(data_json) }
-
-    except Exception as e:
-        print(f'ERROR: in querying Kdb get_minute_bar, {e}, query: {query}')
-        traceback.print_exc(file=sys.stdout)
-
-    return {'error:': 'kdb data not available.', 'query': query}
-
-
-@app.route('/tickupdate')
-def get_tick_update():
-    print(f'xxxx get_tick_update {q}, {q.is_connected()}')
-
-    if not q.is_connected():
-        return {'error:': 'not connected to kdb'}
-    
-    try:
-        query = f'0!update dftp:"t"$"z"$(qtm-"z"$wstm), dftz:"t"$(.z.p-wstm), kdbtime:.z.z, wstz:"z"$wstm from update wstm:"p"$1970.01.01D+tms from select by sym from trade where sym in `SPY`AAPL'
-        #query = f'0!update wstz:"z"$wstm, kdbtime:.z.z from update wstm:"p"$1970.01.01D+1000000*lastSaleTime, qtm:"z"$lastUpdatedz, price:lastSalePrice from select by sym:symbol from iextops where symbol in `SPY`AAPL'
-        tm = q(query)
-        print(f'xxxx tickupdate: {query}, qtime: {tm}')
-        
-        return {'msg_type': 'tick_update', 'data': tm.to_json(orient='records') }
-
-    except Exception as e:
-        print(f'ERROR: in querying Kdb tickupdate, {e}')
-
-    return {'error:': 'kdb data not available.'}
 
 
 @app.route('/tickupdate2')
@@ -587,24 +489,19 @@ def get_tick_update2():
         return {'error:': 'not connected to kdb'}
     
     try:
-        query = '0!select tm:qtm, price:lastSalePrice by sym:symbol from  update qtm:"j"$(lastSaleTimez-1970.01.01D)%1000000, qtmz:"z"$lastSaleTimez from  select from iextops where symbol in `SPY`AAPL, lastSaleTimez.minute>=13:30'
+        query = 'get_tick_update `SPY`AAPL'
         df = q(query)
         print(f'xxxx tickupdate2: {query}, df:')
-    
+
         tops_data = [{'name':row.sym.decode('utf-8'), 'data':list(map(list, zip(row['tm'], row['price'])))} for i, row in df.iterrows()]
         #print(f'xxxx tickupdate2: {query}, tops_data: {tops_data} ')
 
-
-        query2 = 'update sym:`AAPL2`SPY2 from  0!select tm:tms%1000000, price by sym from update wtm:"p"$1970.01.01D+tms from  select by qtm.minute, sym from trade where sym in `SPY`AAPL, qtm.minute>=13:30'
-        df2 = q(query2)
-        ticks_data = [{'name':row.sym.decode('utf-8'), 'data':list(map(list, zip(row['tm'], row['price'])))} for i, row in df2.iterrows()]
-        #print(f'xxxx tickupdate2: {query2}, ticks_data: {ticks_data} ')        
         # test data
         tops_json = '[{"name": "AAPL", "data": [[1592323719865, 349.72], [1592323778164, 349.75], [1592323856421, 349.365], [1592323917619, 349.5], [1592323975537, 350.0]]}, {"name": "SPY", "data": [[1592323735266, 311.54], [1592323797892, 311.59], [1592323853178, 311.44], [1592323919910, 311.65], [1592323978168, 311.92]]}]'
 
 
-        return {'msg_type': 'tick_update2', 'ticks_data': tops_json, 'tops_data': json.dumps(tops_data+ticks_data) }
-        #return {'msg_type': 'tick_update2', 'ticks_data': tops_json, 'tops_data': json.dumps(ticks_data) }
+        #return {'msg_type': 'tick_update2', 'ticks_data': tops_json, 'tops_data': json.dumps(tops_data+ticks_data) }
+        return {'msg_type': 'tick_update2', 'ticks_data': tops_json, 'tops_data': json.dumps(tops_data) }
 
     except Exception as e:
         print(f'ERROR: in querying Kdb tickupdate, {e}')
@@ -656,6 +553,7 @@ orders_hist_df = pd.DataFrame()
 acct_pnl = {}
 pos = {}
 order_id_dict = {}
+
 
 def update_signals_count(signals_count_map, signals_count_dict, signals_df, long_or_short):
     #### update signals_rank -- $$$ IMPL
@@ -875,6 +773,7 @@ def background_thread():
     orders_hist_len = 0
     sorted_pnl = defaultdict(float)
 
+    bday = datetime.today().date().strftime('%m%d%Y')
 
     try:
         while True:
@@ -884,19 +783,15 @@ def background_thread():
             socketio.sleep(13)
             count += 1
 
-            stats = q("get_summary2[]")
+            stats = q("get_summary22[]")
             stats['count'] = count
-
-            #print('xxxx: stats -')
-            #print(stats.tail())
             stats_json = stats.to_json(orient='records')
-            #print(stats.dtypes)
             #stats_html = stats.to_html(classes="table table-hover table-bordered table-striped",header=True)
             #print(stats_json)
             #print(stats_html)
 
+
             # check ACTIVE trading period -
-            bday = datetime.today().date().strftime('%m%d%Y')
             utc_time = datetime.utcnow()
             cur_hr, cur_mm = utc_time.hour, utc_time.minute
             print(f'XXXX DEBUG: UTC_TIME: {utc_time}, {cur_hr}, {cur_mm}')
@@ -937,10 +832,10 @@ def background_thread():
 
                 # display only the last n signals -        
                 signals_hist_df = pd.concat(signals_hist).sort_values(by='count', ascending=False)
-                #print('xxxx signal_hist_df')
-                #print(signals_hist_df)
+                #print('xxxx signal_hist_df:', signals_hist_df)
 
-            # keep last 5 signals
+
+            # keep last 5 signals on display -
             hist_cols = ['count', 'sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal']
             signals_cols = ['id', 'qtm', 'src', 'sym', 'price', 'volume', 'ps', 'tick', 'signal']
 
@@ -953,8 +848,8 @@ def background_thread():
 
             # latest signals -
             signals_json = signals_tbl.to_json(orient='records')
-            #print('$$$$ signals_json')
-            #print(signals_json)
+            #print('$$$$ signals_json:', signals_json)
+
 
             # orders_hist_df
             orders_hist_html = f"<div>Daily order count: {len(orders_hist)}</div>"
@@ -979,51 +874,6 @@ def background_thread():
                 sorted_pnl = get_agg_pnl(orders_hist_df)
 
 
-            # minute price series -
-            #query = '0!select data:100*price % first price by name:sym  from select last price by sym, qtm.minute from trade where sym like "XL*"'
-            #prices_df = q(query)
-            #prices_json = prices_df.to_json(orient='records')
-            #print('xxxx prices_json:')
-            #print(prices_json)
-
-            # create time series JSON obj for Highchart -
-            query = """
-            { 
-            tm:0!select last price by sym, 5 xbar qtm.minute from trade where sym in x, qtm.minute>=?[.z.T>=13:35;13:30;12:01];
-            exec (distinct tm`sym)#sym!price by mm:minute from tm
-            } (exec distinct sym from trade)
-            """
-            minute_df = q(query)
-            print('xxxx minute_df:')
-            minute_df = minute_df.bfill() # to ensure price available from Open
-            minute_df = minute_df.ffill() # to keep each series up to date
-            #print(minute_df.head())
-            #print(minute_df.tail())
-            #minute_rebased = rebase_series(minute_df.dropna())
-            minute_rebased = rebase_series(minute_df.ffill())
-
-            minute_json = []
-            for sym, row in minute_rebased.items():
-                #print(f"i:{i}, r:{list(row.index)}, {list(row)}")
-                #print(f"name:{i}, data:{list(zip(list(row.index), list(row)))}")
-                #minute_json.append({f"name:{i}, data:{list(zip(list(row.index), list(row)))}"})
-                #minute_json.append({f"name:{i}, data:{list(map(list, zip(list(row.index), list(row))))}"})            
-                #minute_json.append({f"name:{i}, data:{list(map(list, zip([str(x).split(' ')[-1] for x in row.index], list(row))))}"})
-                
-                #print(f"i:{sym},  {[datetime.strptime(str(x).split(' ')[-1], '%H:%M:%S').timestamp() for x in row.index]}")            
-                #print(f"name:{sym}, {[int(pd.to_datetime(datetime.strptime(str(x).split(' ')[-1], '%H:%M:%S')).value/100000) for x in row.index]}")
-                #mdata = list(map(list, zip([datetime.strptime(str(x).split(' ')[-1], '%H:%M:%S').isoformat() for x in row.index], list(row))))
-                mdata = list(map(list, zip([int(pd.to_datetime(datetime.strptime(str(x).split(' ')[-1], '%H:%M:%S')).value / 1000000) for x in row.index], list(row))))
-                minute_json.append({"name": sym, "data": mdata})
-
-
-            print('xxxx minute_json:')
-            #print(minute_json)
-
-            # publish kdb upd time:
-            tm = q('update dft:"t"$"z"$(qtm-"z"$wstm) from select max qtm, max wstm from update wstm:"p"$1970.01.01D+tms from select by sym from trade')
-            print(f'count: {count}, qtime: {tm}')
-
             ### send alert to UI when delay is over 1m - IMPL
             live_positions_df = get_live_positions()
             live_positions_html = live_positions_df.sort_values('unrealized_pl').to_html(classes="table table-hover table-bordered table-striped",header=True)
@@ -1036,6 +886,11 @@ def background_thread():
             print(f'$$$$$$$$ SSSSSSSSSSSSSSSSSSS sending wss updates {datetime.now()}')
             positions_allowed = config.get('orders_threshold', 11)
 
+
+            # publish kdb upd time: -
+            # tm = q('update dft:"t"$"z"$(qtm-"z"$wstm) from select max qtm, max wstm from update wstm:"p"$1970.01.01D+tms from select by sym from trade')
+            tm = q('get_trade_time[]')
+            print(f'count: {count}, qtime: {tm}')
 
 
             socketio.emit('my_response',
@@ -1053,7 +908,7 @@ def background_thread():
                             'summary': stats_json,
 
                             # 'prices_series': prices_json,
-                            'minute_json': json.dumps(minute_json),
+                            #'minute_json': json.dumps(minute_json),
 
                             'positions_allowed': positions_allowed,
                             'alerts': str(alerts),
@@ -1122,7 +977,7 @@ print('-- Display full Dataframe without truncation')
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
-pd.set_option('display.max_colwidth', -1)
+#pd.set_option('display.max_colwidth', -1)
 
 
 # write all signals_ui df to file for backtest -

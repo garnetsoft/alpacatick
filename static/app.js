@@ -1,974 +1,332 @@
 $(document).ready(function() {
 
-    // tick chart to monitor ticks data
-    var tickTopsChart = Highcharts.chart('topsChart', {
-      chart: {
-          //type: 'spline',
-          zoomType: 'xy',
-          animation: Highcharts.svg,
-          //marginRight: 10,
-          
-          events: {
-              load: function () {
-                  console.log('xxxx topsChart events:')
-                  console.log(this.series)
-  
-                  // set up the updating of the chart each second
-                  //var series = this.series[0];
-                  var series = this.series;
-                  var series_len = series.length
-                  
-                  elmnt =  document.getElementById('debug');
-                  // clear current content
-                  elmnt.innerHTML = "";
-
-                  setInterval(function () {
-
-                      xhttp = new XMLHttpRequest();
-                      xhttp.onreadystatechange = function() {
-                        if (this.readyState == 4) {
-                          if (this.status == 200) {
-                            //console.log('xxxx ajax res:')
-                            //console.log(this)
-                            console.log('xxxx topsChart ajax responseText:')
-                            //console.log(this.responseText)
-    
-                            // parse the last tick:
-                            var rdata = JSON.parse(this.response)
-                            console.log('topsChart rdata x:')
-                            //console.log(rdata)
-  
-                            var data = JSON.parse(rdata.tops_data)
-                            console.log('topsChart data:')
-                            //console.log(data)
-
-                            // for (var i = 0, len = data.length; i < len; i++) {
-                            //   series[i].setData(data[i])
-                            // }
-                            
-                            tickTopsChart.update({series: data}, true, true);
-                          }
-
-                          if (this.status == 404) {elmnt.innerHTML = "Page not found.";}
-                        }
-                      }
-                      xhttp.open("GET", "/tickupdate2", true);
-                      xhttp.send();
-                      /* Exit the function: */
-                      return;
-  
-                  }, 11*1000);  // update everython 10 seconds
-              }
-          }
-      },
-  
-      time: {
-          useUTC: false
-      },
-  
-      title: {
-          text: 'Real-time ticks'
-      },
-  
-      xAxis: {
-          type: 'datetime',
-          tickPixelInterval: 150
-      },
-
-      yAxis: [{
-          // Primary yAxis
-          labels: {
-            format: '{value:.2f} °F',
-            style: {
-                color: Highcharts.getOptions().colors[0]
-            }
-          },
-          title: {
-            text: 'AAPL',
-            style: {
-                color: Highcharts.getOptions().colors[0]
-            }
-          }        
-        },
-        { // Secondary yAxis
-          title: {
-            text: 'SPY',
-            style: {
-                color: Highcharts.getOptions().colors[1]
-            }
-          },
-          labels: {
-            format: '{value:.2f} °C',
-            style: {
-                color: Highcharts.getOptions().colors[1]
-            }
-          },
-          opposite: true
-        },
-      ],
-
-      tooltip: {
-        shared: true,
-        headerFormat: '<b>{series.name}</b><br/>',
-        pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.2f}'
-      },
-  
-      legend: {
-        layout: 'vertical',
-        align: 'left',
-        x: 120,
-        verticalAlign: 'top',
-        y: 100,
-        floating: true,
-        backgroundColor:
-            Highcharts.defaultOptions.legend.backgroundColor || // theme
-            'rgba(255,255,255,0.25)'
-      },
-
-      exporting: {
-          enabled: true
-      },
-  
-      // try multiple series -
-      series: [
-      {
-        name: 'SPY',
-        data: [[(new Date()).getTime(), 310.01]]
-      },    
-      {
-        name: 'AAPL',
-        yAxis: 1,
-        data: [[(new Date()).getTime(), 380.01]]
-      },
-      {
-        name: 'SPY2',
-        data: [[(new Date()).getTime(), 310.09]]
-      },    
-      {
-        name: 'AAPL2',
-        yAxis: 1,
-        data: [[(new Date()).getTime(), 380.09]]
-      },
-
-    ]
-  
-  }); // tops
-    
-  
-  // pnl chart
-  var tickChart = Highcharts.chart('mychart', {
-    chart: {
-        type: 'spline',
-        animation: Highcharts.svg, // don't animate in old IE
-        marginRight: 10,
-        events: {
-            load: function () {
-                console.log('xxxx mychart events:')
-                console.log(this.series)
-
-                // set up the updating of the chart each second
-                //var series = this.series[0];
-                var series = this.series;
-                var mdata = []
-                var data_series = {'pnl': [], 'OpeningBalance': []}
-
-                setInterval(function () {
-                    console.log('xxxx mychart series')
-                    //console.log(series)
-
-                    // Make an HTTP request
-                    // document.getElementById('dynamic_content').innerText = new Date().toUTCString();
-                    elmnt =  document.getElementById('debug');
-                    // clear current content
-                    elmnt.innerHTML = "";
-
-                    xhttp = new XMLHttpRequest();
-                    xhttp.onreadystatechange = function() {
-                      if (this.readyState == 4) {
-                        if (this.status == 200) {
-                          //console.log('xxxx ajax res:')
-                          //console.log(this)
-                          console.log('xxxx ajax responseText:')
-                          console.log(this.responseText)
-
-                          elmnt.innerHTML = this.responseText;
-
-                          // parse the last tick:
-                          var rdata = JSON.parse(this.response)
-                          //console.log('rdata pnl x:')
-                          //console.log(rdata)
-
-                          var data = JSON.parse(rdata.data)
-                          console.log('rdata pnl: ' + data.length)
-
-                          for (var i = 0; i < data.length; i++) {
-                            var pnlseries = data_series[data[i].sym]
-                            console.log('xxx pnlupdate')
-                            console.log(data[i].pnl)
-
-                            pnlseries.push(data[i].pnl)
-
-                            //console.log('xxx pnl')
-                            //console.log(pnlseries)
-
-                            series[i].setData(pnlseries)
-
-                            // save init pnl -
-                            if (mdata.length == 0) {
-                              mdata.push(data[i].pnl)
-                            }
-                          }
-
-                          // update opening balance with the same init value
-                          if (mdata.length > 0) {
-                            console.log('xxxx: mdata: ' + mdata)
-                            init_series = data_series['OpeningBalance']
-                            init_series.push([(new Date()).getTime(), mdata[0][1] ])
-                            //console.log(init_series)
-
-                            series[1].setData(init_series)
-                          }
-
-                          // data.forEach(function(o) {
-                          //   tickdata = data_series.get(o.sym)
-                          //   tickdata.push([o.qtm, o.price])
-                          // });
-                          // for (var i = 0; i < data.length; i++) {
-                          //   var tickdata = data[i]
-                          //   var mdata = data_series[tickdata.sym]
-
-                          //   var qtm = tickdata['qtm']
-                          //   var kdbtime = tickdata['kdbtime']
-                          //   var wstime = tickdata['wstz']
-
-                          //   console.log('xxxx time check: ')
-
-                          //   if (i > 0) {
-                          //     mdata.push([qtm, tickdata['price']])
-                          //   }
-                          //   else {
-                          //     // use wstime to know if any market data delay
-                          //     mdata.push([wstime, tickdata['price']])
-                          //   }
-                            
-                          //   series[i].setData(mdata)
-                          // }
-
-                        }
-                        if (this.status == 404) {elmnt.innerHTML = "Page not found.";}
-                        /* Remove the attribute, and call this function once more: */
-                      }
-                    }
-                    xhttp.open("GET", "/pnlupdate", true);
-                    xhttp.send();
-                    /* Exit the function: */
-                    return;
-
-                }, 31*1000);  // update everython 10 seconds
-            }
-        }
-    },
-
-    time: {
-        useUTC: false
-    },
-
-    title: {
-        text: 'Live pnl'
-    },
-
-    accessibility: {
-        announceNewData: {
-            enabled: true,
-            minAnnounceInterval: 15000,
-            announcementFormatter: function (allSeries, newSeries, newPoint) {
-                if (newPoint) {
-                    return 'New point added. Value: ' + newPoint.y;
-                }
-                return false;
-            }
-        }
-    },
-
-    xAxis: {
-        type: 'datetime',
-        tickPixelInterval: 150
-    },
-
-    yAxis: {
-        title: {
-            text: 'Value'
-        },
-        plotLines: [{
-            value: 0,
-            width: 1,
-            color: '#808080'
-        }]
-    },
-
-    tooltip: {
-        headerFormat: '<b>{series.name}</b><br/>',
-        pointFormat: '{point.x:%Y-%m-%d %H:%M:%S}<br/>{point.y:.2f}'
-    },
-
-    legend: {
-      layout: 'vertical',
-      align: 'right',
-      verticalAlign: 'middle'
-    },
-
-    exporting: {
-        enabled: true
-    },
-
-    // try multiple series -
-    series: [
-      {
-        name: 'pnl',
-        data: [[(new Date()).getTime(), 50000.09]]
-      },
-      {
-        name: 'OpeningBalance',
-        data: [[(new Date()).getTime(), 50000.01]]
-      },    
-    ]
-
-  });    
-
-
+  // grid table setup
   var summaryGrid = new FancyGrid({
-      title: 'Summary',
-      renderTo: 'summary',
-      width: 'fit',
-      height: 'fit',
-      resizable: true,
-      trackOver: true,
-      selModel: 'row',
+    title: 'Summary',
+    renderTo: 'summary',
+    width: 'fit',
+    height: 'fit',
+    resizable: true,
+    trackOver: true,
+    selModel: 'row',
 
-      footer: {
-        status: '<span style="position: relative;top: 3px;">*</span> - Stock intraday stats:',
-        source: {
-          text: 'AQ Analytics',
-          link: 'ny529s.com'
-        }
-      },        
-      data: {
-          items: summary_init,
-          // fields:['sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'dv', 'vwap', 'close', 'price', 'atr', 'chg', 'volume', 'l2dv', 'r2dv']
-      },
-      defaults: {
-          type: 'string',
-          width: 100,
-          editable: false,
-          sortable: true,
-      },
-
-      columns: [
-        {
-          type: 'number',
-          title: 'id',
-          index: 'id',
-        },
-        //2020-05-21 19:26:13.758
-        {
-          type: 'text',
-          title: 'qtm',
-          index: 'qtm',
-          width: 150,
-        },
-        {
-          type: 'number',
-          title: 'n',
-          index: 'n',
-        },
-
-        {
-          type: 'number',
-          title: 'open',
-          index: 'open',
-        },
-        {
-          type: 'number',
-          title: 'mn',
-          index: 'mn',
-        },
-        {
-          type: 'number',
-          title: 'mu',
-          index: 'mu',
-          render: renderPriceFn,
-        },
-        {
-          type: 'number',
-          title: 'md',
-          index: 'md',
-        },
-        {
-          type: 'number',
-          title: 'mx',
-          index: 'mx',
-        },
-        {
-          type: 'number',
-          title: 'vwap',
-          index: 'vwap',
-          //render: renderPriceFn,
-          render: function(o) {
-              //o.value = (o.value).toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
-              //o.value = '$$' + (o.value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-              return o;
-          }
-        },
-        {
-          type: 'number',
-          title: 'dv',
-          index: 'dv',
-          render: renderPriceFn,
-        },
-        {
-          type: 'number',
-          title: 'close',
-          index: 'close',
-          render: renderCloseFn,
-        },
-        {
-          type: 'text',
-          title: 'sym',
-          index: 'sym',
-        },
-        {
-          title: 'price',
-          type: 'sparklineline',
-          index: 'price',
-          width: 200,
-          sparkConfig: {
-            barColor: '#60B3E2'
-          }
-        },
-        {
-          title: 'pbox',
-          type: 'sparklinebox',
-          index: 'price',
-          width: 150,
-          sparkConfig: {
-            barColor: '#60B3E2'
-          }
-        },
-        {
-          title: 'P-OH/LC',
-          type: 'sparklineline',
-          index: 'ps',
-          width: 100,
-          sparkConfig: {
-            barColor: '#60B3E2'
-          }
-        },
-        {
-          type: 'number',
-          title: 'chg',
-          index: 'chg',
-          cellAlign: 'right',
-          render: renderChangesFn,
-        },
-        {
-          type: 'number',
-          title: 'atr',
-          index: 'atr',
-          sortable: true,            
-          render: renderAtrFn,
-        },          
-        {
-          type: 'number',
-          title: 'volume',
-          index: 'volume',
-          cellAlign: 'right',
-          format: 'number',            
-        },
-        {
-          type: 'number',
-          title: 'l2dv',
-          index: 'l2dv',
-          render: renderPriceFn,
-        },
-        {
-          type: 'number',
-          title: 'r2dv',
-          index: 'r2dv',
-          render: renderPriceFn,
-        },
-
-      ]
-
-  });
-
-    
-  // create a fancygrid var
-  var signalGrid = new FancyGrid({
-      title: 'Trading Stats',
-      renderTo: 'signal',
-      width: 'fit',
-      height: 'fit',
-      trackOver: true,
-      //resizable: true,
-      selModel: 'row',
-      cellHeight: 50,
-      
-      footer: {
-        status: '<span style="position: relative;top: 3px;">*</span> - Live Trading Sinagls (last 5)',
-        source: {
-          text: 'AQ Analytics',
-          link: 'ny529s.com'
-        }
-      },
-      data: {
-        items: signal_init
-      },
-      defaults: {
+    footer: {
+      status: '<span style="position: relative;top: 3px;">*</span> - Stock intraday stats:',
+      source: {
+        text: 'AQ Analytics',
+        link: 'ny529s.com'
+      }
+    },        
+    data: {
+        items: summary_init,
+        // fields:['sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'dv', 'vwap', 'close', 'price', 'atr', 'chg', 'volume', 'l2dv', 'r2dv']
+    },
+    defaults: {
         type: 'string',
         width: 100,
         editable: false,
         sortable: true,
-      },
-      //clicksToEdit: 1,
-      columnLines: false,
+    },
 
-      columns: [{
-        type: 'number',
-        title: 'ID',
-        index: 'id',
-        width: 100,
-        sortable: true,
-        locked: true,
-        //cls: 'id-column-cls'
-      },
+    columns: [
       {
         type: 'number',
-        title: 'Count',
-        index: 'count',
-        width: 80,
-        sortable: true,
-        locked: true,
-      },        
+        title: 'id',
+        index: 'id',
+      },
+      //2020-05-21 19:26:13.758
       {
         type: 'text',
         title: 'qtm',
         index: 'qtm',
         width: 150,
-      }, {
-        type: 'image',
-        title: 'Company',
-        index: 'src',
-        width: 80,
-        resizable: true,
-        autoHeight: true,
-        cls: 'photo'
-      }, {
-        title: 'Ticker',
-        index: 'sym',
-        resizable: true,
-        width: 140,
-        type: 'text',
-        render: function(o) {
-  
-          o.style = {
-            'font-size': '14px'
-          };
-  
-          return o;
-        }
-      }, 
+      },
       {
-        title: 'Prices',
+        type: 'number',
+        title: 'n',
+        index: 'n',
+      },
+
+      {
+        type: 'number',
+        title: 'open',
+        index: 'open',
+      },
+      {
+        type: 'number',
+        title: 'mn',
+        index: 'mn',
+      },
+      {
+        type: 'number',
+        title: 'mu',
+        index: 'mu',
+        render: renderPriceFn,
+      },
+      {
+        type: 'number',
+        title: 'md',
+        index: 'md',
+      },
+      {
+        type: 'number',
+        title: 'mx',
+        index: 'mx',
+      },
+      {
+        type: 'number',
+        title: 'vwap',
+        index: 'vwap',
+        //render: renderPriceFn,
+        render: function(o) {
+            //o.value = (o.value).toFixed(2).replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+            //o.value = '$$' + (o.value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            return o;
+        }
+      },
+      {
+        type: 'number',
+        title: 'dv',
+        index: 'dv',
+        render: renderPriceFn,
+      },
+      {
+        type: 'number',
+        title: 'close',
+        index: 'close',
+        render: renderCloseFn,
+      },
+      {
+        type: 'text',
+        title: 'sym',
+        index: 'sym',
+      },
+      {
+        title: 'price',
         type: 'sparklineline',
         index: 'price',
-        width: 350,
+        width: 200,
         sparkConfig: {
           barColor: '#60B3E2'
         }
       },
       {
-          title: 'Box',
-          type: 'sparklinebox',
-          index: 'price',
-          width: 150,
-          sparkConfig: {
-            barColor: '#60B3E2'
-          }
-      },
-      {
-        title: 'Volume',
-        index: 'volume',
-        type: 'number',
-        sortable: true,
-        cellAlign: 'right',
-        format: 'number',
-      },
-      {
-          title: 'O(H/L)C',
-          type: 'sparklineline',
-          index: 'ps',
-          width: 150,
-          sparkConfig: {
-            barColor: '#60B3E2'
-          }
-      },
-      {
-          title: 'Last tick',
-          index: 'tick',
-          type: 'number',
-          //sortable: true,
-          //cellAlign: 'right',
-          format: 'number',
-          render: function(o) {
-            if (o.data.signal == 'Mom_Long') {
-              o.style = {
-                color: '#65AE6E',
-                'font-size': '14px'
-              };
-            } else {
-              o.style = {
-                color: '#E46B67',
-                'font-size': '14px'
-              };
-            }
-
-            return o;
-          }
-        },
-        {
-          title: 'Signal',
-          index: 'signal',
-          resizable: true,
-          width: 200,
-          type: 'text',
-          render: function(o) {
-    
-            if (o.value == 'Mom_Long') {
-              o.style = {
-                color: '#65AE6E',
-                'font-size': '14px'
-              };
-            } else {
-              o.style = {
-                color: '#E46B67',
-                'font-size': '14px'
-              };
-            }
-
-            return o;
-          }
-        },
-      ]
-  });
-
-
-  var bubbleChart =  Highcharts.chart('bubbleChart', {
-
-      chart: {
-          type: 'bubble',
-          plotBorderWidth: 1,
-          zoomType: 'xy',
-
-          events: {
-            load: function () {
-                var bubble_series = this.series;
-  
-                setInterval(function () {
-                    // ajax request -
-                    xhttp = new XMLHttpRequest();
-                    xhttp.onreadystatechange = function() {
-                      if (this.readyState == 4) {
-                        if (this.status == 200) {
-  
-                          // parse the last tick:
-                          var rdata = JSON.parse(this.response)
-                          console.log('stats ajax response x:')
-                          //console.log(rdata)
-  
-                          // override the chart with entire new series
-                          console.log('xxxx stats_data:')
-                          var stats_obj = JSON.parse(rdata.stats_data)
-                          console.log(stats_obj)
-
-                          bubble_series[0].setData(stats_obj[0].data)
-                          bubble_series[1].setData(stats_obj[1].data)
-                        }
-                        if (this.status == 404) {elmnt.innerHTML = "Page not found.";}
-                        /* Remove the attribute, and call this function once more: */
-                      }
-                    }
-                    xhttp.open("GET", "/statsbar2", true);
-                    xhttp.send();
-                    /* Exit the function: */
-                    return;
-  
-                }, 33*1000);
-            }
-          } // end events  
-      },
-
-      legend: {
-          enabled: true
-      },
-
-      title: {
-          text: 'Intraday stats: DOW 30'
-      },
-
-      // subtitle: {
-      //     text: 'Source: <a href="http://www.euromonitor.com/">Euromonitor</a> and <a href="https://data.oecd.org/">OECD</a>'
-      // },
-
-      accessibility: {
-          point: {
-              valueDescriptionFormat: '{index}. {point.name}, fat: {point.x}g, sugar: {point.y}g, obesity: {point.z}%.'
-          }
-      },
-
-      xAxis: {
-          gridLineWidth: 1,
-          title: {
-              text: 'Sharpe'
-          },
-          labels: {
-              format: '{value} '
-          },
-          plotLines: [{
-              color: 'black',
-              dashStyle: 'dot',
-              width: 2,
-              value: 0,
-              label: {
-                  rotation: 0,
-                  y: 15,
-                  style: {
-                      fontStyle: 'italic'
-                  },
-                  text: 'avg. sharpe'
-              },
-              zIndex: 3
-          }],
-          accessibility: {
-              rangeDescription: 'Range: 60 to 100 grams.'
-          }
-      },
-
-      yAxis: {
-          startOnTick: false,
-          endOnTick: false,
-          title: {
-              text: 'Total return'
-          },
-          labels: {
-              format: '{value} '
-          },
-          maxPadding: 0.2,
-          plotLines: [{
-              color: 'black',
-              dashStyle: 'dot',
-              width: 2,
-              value: 0,
-              label: {
-                  align: 'right',
-                  style: {
-                      fontStyle: 'italic'
-                  },
-                  text: 'avg. return',
-                  x: -10
-              },
-              zIndex: 3
-          }],
-          accessibility: {
-              //rangeDescription: 'Range: 0 to 160 grams.'
-          }
-      },
-
-      tooltip: {
-          useHTML: true,
-          headerFormat: '<table>',
-          pointFormat: '<tr><th colspan="2"><h3>{point.name}</h3></th></tr>' +
-              '<tr><th>Sharpe:</th><td>{point.x:,.2f} </td></tr>' +
-              '<tr><th>Return:</th><td>{point.y:,.2f} </td></tr>' +
-              '<tr><th>Volatility:</th><td>{point.z:,.2f}%</td></tr>',
-          footerFormat: '</table>',
-          followPointer: true
-      },
-
-      plotOptions: {
-          series: {
-              dataLabels: {
-                  enabled: true,
-                  format: '{point.name}'
-              }
-          }
-      },
-
-      series: [{
-        name: 'SeriesA',
-        data: [
-            { x: 95, y: 95, z: 13.8, name: 'US', country: 'US' },
-            { x: 86.5, y: 102.9, z: 14.7, name: 'UK', country: 'UK' },
-            { x: 64, y: 82.9, z: 31.3, name: 'CN', country: 'China' }
-        ],
-        marker: {
-          fillColor: {
-              radialGradient: { cx: 0.4, cy: 0.3, r: 0.7 },
-              stops: [
-                  [0, 'rgba(255,255,255,0.5)'],
-                  [1, Highcharts.color(Highcharts.getOptions().colors[0]).setOpacity(0.5).get('rgba')]
-              ]
-          }
-        }        
-      }, {
-        name: 'Watchlist',
-        data: [
-        ],
-        marker: {
-          fillColor: {
-              radialGradient: { cx: 0.4, cy: 0.3, r: 0.7 },
-              stops: [
-                  [0, 'rgba(255,255,255,0.5)'],
-                  [1, Highcharts.color(Highcharts.getOptions().colors[1]).setOpacity(0.5).get('rgba')]
-              ]
-          }
-        }        
-      }]
-
-  });
-
-
-  var minuteChart = Highcharts.chart('minuteChart', {
-    chart: {
-        type: 'spline',
-
-        events: {
-          load: function () {
-              // set up the updating of the chart each second
-              var series = this.series;
-              //console.log(series)
-
-              setInterval(function () {
-                  // Make an HTTP request
-                  // document.getElementById('dynamic_content').innerText = new Date().toUTCString();
-
-                  xhttp = new XMLHttpRequest();
-                  xhttp.onreadystatechange = function() {
-                    if (this.readyState == 4) {
-                      if (this.status == 200) {
-
-                        // parse the last tick:
-                        var rdata = JSON.parse(this.response)
-                        console.log('minutebar ajax response x:')
-                        //console.log(rdata)
-                        //console.log('xxxx minute_data:')
-                        //console.log(rdata.minute_data)
-
-                        var minute_obj = JSON.parse(rdata.minute_data)
-                        //console.log(minute_obj)
-
-                        minuteChart.update({series: minute_obj}, true, true);                        
-                        //series[0].update({series: minute_obj}[0], true, true);
-                        //series[1].update({series: minute_obj}[1], true, true);                          
-                        //series[0].setData(minute_obj[0])
-                        //series[1].setData(minute_obj[1])
-                        // minuteChart.redraw()
-
-                      }
-                      if (this.status == 404) {elmnt.innerHTML = "Page not found.";}
-                      /* Remove the attribute, and call this function once more: */
-                    }
-                  }
-                  xhttp.open("GET", "/minutebar", true);
-                  xhttp.send();
-                  /* Exit the function: */
-                  return;
-
-              }, 37*1000);
-          }
-        },
-
-      // end events        
-
-    },
-    title: {
-        text: 'Intraday Minute Chart - Dow30'
-    },
-    // subtitle: {
-    //     text: 'Irregular time data in Highcharts JS'
-    // },
-    xAxis: {
-        type: 'datetime',
-        tickPixelInterval: 150,
-        dateTimeLabelFormats: {
-            //month: '%e. %b',
-            year: '%b',
-            hour: '%H:%M',
-        },
-        title: {
-            text: 'Time'
+        title: 'pbox',
+        type: 'sparklinebox',
+        index: 'price',
+        width: 150,
+        sparkConfig: {
+          barColor: '#60B3E2'
         }
-    },
-    yAxis: {
-        title: {
-            text: 'Prices (normalized)'
-        },
-        //min: 0
-    },
-    tooltip: {
-        headerFormat: '<b>{series.name}</b><br/>',
-        pointFormat: '{point.x:%H:%M:%S}<br/>{point.y:.2f}'        
-    },
+      },
+      {
+        title: 'P-OH/LC',
+        type: 'sparklineline',
+        index: 'ps',
+        width: 100,
+        sparkConfig: {
+          barColor: '#60B3E2'
+        }
+      },
+      {
+        type: 'number',
+        title: 'chg',
+        index: 'chg',
+        cellAlign: 'right',
+        render: renderChangesFn,
+      },
+      {
+        type: 'number',
+        title: 'atr',
+        index: 'atr',
+        sortable: true,            
+        render: renderAtrFn,
+      },          
+      {
+        type: 'number',
+        title: 'volume',
+        index: 'volume',
+        cellAlign: 'right',
+        format: 'number',            
+      },
+      {
+        type: 'number',
+        title: 'l2dv',
+        index: 'l2dv',
+        render: renderPriceFn,
+      },
+      {
+        type: 'number',
+        title: 'r2dv',
+        index: 'r2dv',
+        render: renderPriceFn,
+      },
 
-    legend: {
-      layout: 'vertical',
-      align: 'right',
-      verticalAlign: 'middle'
-    },
+    ]
 
-    plotOptions: {
-      series: {
-          label: {
-              connectorAllowed: false
-          },
-          marker: {
-              enabled: false
-          }          
+});
+
+  
+// create a fancygrid var
+var signalGrid = new FancyGrid({
+    title: 'Trading Stats',
+    renderTo: 'signal',
+    width: 'fit',
+    height: 'fit',
+    trackOver: true,
+    //resizable: true,
+    selModel: 'row',
+    cellHeight: 50,
+    
+    footer: {
+      status: '<span style="position: relative;top: 3px;">*</span> - Live Trading Sinagls (last 5)',
+      source: {
+        text: 'AQ Analytics',
+        link: 'ny529s.com'
       }
     },
+    data: {
+      items: signal_init
+    },
+    defaults: {
+      type: 'string',
+      width: 100,
+      editable: false,
+      sortable: true,
+    },
+    //clicksToEdit: 1,
+    columnLines: false,
 
-    // create minute bar series -
-    // exec (`SPY`AAPL)#sym!price by minute from 0!select last price by sym, 5 xbar qtm.minute from trade where sym in `SPY`AAPL
-    // [{"name": s, "data": list(map(list, zip([datetime.strptime(str(x)[-8:], '%H:%M:%S') for x in mdata.index], mdata))) } for s, mdata in df.items()]
+    columns: [{
+      type: 'number',
+      title: 'ID',
+      index: 'id',
+      width: 100,
+      sortable: true,
+      locked: true,
+      //cls: 'id-column-cls'
+    },
+    {
+      type: 'number',
+      title: 'Count',
+      index: 'count',
+      width: 80,
+      sortable: true,
+      locked: true,
+    },        
+    {
+      type: 'text',
+      title: 'qtm',
+      index: 'qtm',
+      width: 150,
+    }, {
+      type: 'image',
+      title: 'Company',
+      index: 'src',
+      width: 80,
+      resizable: true,
+      autoHeight: true,
+      cls: 'photo'
+    }, {
+      title: 'Ticker',
+      index: 'sym',
+      resizable: true,
+      width: 140,
+      type: 'text',
+      render: function(o) {
 
-    series: [
-      {
-        name: 'SPY',
-        data: [[(new Date()).getTime(), 300.09]]
+        o.style = {
+          'font-size': '14px'
+        };
+
+        return o;
+      }
+    }, 
+    {
+      title: 'Prices',
+      type: 'sparklineline',
+      index: 'price',
+      width: 350,
+      sparkConfig: {
+        barColor: '#60B3E2'
+      }
+    },
+    {
+        title: 'Box',
+        type: 'sparklinebox',
+        index: 'price',
+        width: 150,
+        sparkConfig: {
+          barColor: '#60B3E2'
+        }
+    },
+    {
+      title: 'Volume',
+      index: 'volume',
+      type: 'number',
+      sortable: true,
+      cellAlign: 'right',
+      format: 'number',
+    },
+    {
+        title: 'O(H/L)C',
+        type: 'sparklineline',
+        index: 'ps',
+        width: 150,
+        sparkConfig: {
+          barColor: '#60B3E2'
+        }
+    },
+    {
+        title: 'Last tick',
+        index: 'tick',
+        type: 'number',
+        //sortable: true,
+        //cellAlign: 'right',
+        format: 'number',
+        render: function(o) {
+          if (o.data.signal == 'Mom_Long') {
+            o.style = {
+              color: '#65AE6E',
+              'font-size': '14px'
+            };
+          } else {
+            o.style = {
+              color: '#E46B67',
+              'font-size': '14px'
+            };
+          }
+
+          return o;
+        }
       },
       {
-        name: 'AAPL',
-        data: [[(new Date()).getTime(), 300.01]]
-      },    
-    ],
-
-    responsive: {
-        rules: [{
-            condition: {
-                maxWidth: 500
-            },
-            chartOptions: {
-                plotOptions: {
-                    series: {
-                        marker: {
-                            radius: 2.5
-                        }
-                    }
-                }
-            }
-        }]
-    }
-  });
+        title: 'Signal',
+        index: 'signal',
+        resizable: true,
+        width: 200,
+        type: 'text',
+        render: function(o) {
   
+          if (o.value == 'Mom_Long') {
+            o.style = {
+              color: '#65AE6E',
+              'font-size': '14px'
+            };
+          } else {
+            o.style = {
+              color: '#E46B67',
+              'font-size': '14px'
+            };
+          }
+
+          return o;
+        }
+      },
+    ]
+  });
+
+
   // An application can open a connection on multiple namespaces, and
   // Socket.IO will multiplex all those connections on a single
   // physical channel. If you don't care about multiple channels, you
@@ -1102,6 +460,7 @@ $(document).ready(function() {
   });
 
 }); // eod-of-documary.ready()
+
 
 
 // global functions -
