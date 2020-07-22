@@ -81,7 +81,7 @@ def create_kdb_obj(data):
     kobj = {}
 
     for idx, d in enumerate(data):
-        print(f'xxxx {idx}, d: {d}')
+        # print(f'xxxx {idx}, d: {d}')
 
         for k, v in d.items():
             if isinstance(v, str):
@@ -151,7 +151,7 @@ response = with_requests(url)
 client = sseclient.SSEClient(response)
 for i, event in enumerate(client.events()):
     data = json.loads(event.data)
-    print(f'xxxx {i}, len: {len(data)}, data: {data}')
+    #print(f'xxxx {i}, len: {len(data)}, data: {data}')
 
     kobj = create_kdb_obj(data)
 

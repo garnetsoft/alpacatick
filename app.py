@@ -142,7 +142,8 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df):
         else:
             prev = signals_count_map[row['sym']]
             
-            if prev['qtm'] != row['qtm']:
+            #if prev['qtm'] != row['qtm']:
+            if (prev['qtm'] != row['qtm']) and (prev['close'] != row['close']):
                 signals_count_dict[row['sym']] += 1
                 signals_count_map[row['sym']] = row
 
@@ -172,12 +173,18 @@ long_signals_count_map = {}
 short_signals_count_dict = defaultdict(int)
 short_signals_count_map = {}
 
+# track all signals that result into orders -
+orders_hist = []
+orders_hist_df = pd.DataFrame()
+
 
 def background_thread():
     """Example of how to send server generated events to clients."""
     count = 0
     signals_hist = []
     signals_hist_df = pd.DataFrame()
+
+    today = datetime.today().date().strftime('%m%d%Y')
 
 
     while True:
@@ -223,19 +230,10 @@ def background_thread():
             print('xxxx signals_ui: ')
             print(signals_ui)
 
-            # #### update signals_rank -- $$$ IMPL
-            # for i, row in signals_df.iterrows():
-                
-            #     if signals_count_dict[row['sym']] == 0:
-            #         signals_count_dict[row['sym']] += 1
-            #         signals_count_map[row['sym']] = row
-            #     else:
-            #         prev = signals_count_map[row['sym']]
-                    
-            #         if prev['qtm'] != row['qtm']:
-            #             signals_count_dict[row['sym']] += 1
+            ### write to signal_ui_yyyyMMDD.csv file -
+            with open(f'/data/signals_ui_{today}.csv', 'a') as f:
+                signals_ui.to_csv(f, header=False)
 
-            # print(f'$$$$: signals_count_dict: {signals_count_dict}')
 
             signals_hist.append(signals_ui)
             # keep just the last 5 signals
@@ -266,7 +264,7 @@ def background_thread():
 
         # publish kdb upd time:
         #tm = q("max exec lastUpdatedz from select by sym from iextops")
-        tm = q('max exec lastSaleTimez from update lastSaleTimez:"p"$1970.01.01D+lastSaleTime*1000000 select by symbol from iextops2')
+        tm = q('max exec lastSaleTimez from update lastSaleTimez:"p"$1970.01.01D+lastSaleTime*1000000 from select by symbol from iextops2')
         print(f'count: {count}, qtime: {tm}')
 
         long_signals_rank = sorted(long_signals_count_dict.items(), key=lambda x: x[1], reverse=True) 
