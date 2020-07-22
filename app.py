@@ -388,23 +388,23 @@ def test_disconnect():
 
 
 ## ajax callback to provide minute bar data
-@app.route('/pricebar/<sec>')
-def get_sector_bar(sec):
-    print(f'xxxx GET /pricebar/<sec> : {sec}')
+@app.route('/pricebar/<s>')
+def get_sector_bar(s):
+    print(f'xxxx GET /pricebar/<s> : {s}')
 
     if not q.is_connected():
         return {'error:': 'not connected to kdb'}
 
-    s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
+    sym = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
     if s == 'sector':
-        s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
+        sym = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
     elif s == 'dow30':
-        s = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
+        sym = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
     elif s == 'etf':
         pass
 
     #query = f'exec ({s})#sym!price by tm:minute from 0!select last price by sym, 1 xbar qtm.minute from trade where sym in {s}, qtm.minute>=?[.z.T>=13:35;13:30;13:01]'
-    query = f'get_price_bar[{s};1]'
+    query = f'get_price_bar[{sym};1]'
     print(f'xxxx get_price_bar query: {query}')  
     td = datetime.today().date().strftime('%m/%d/%Y')
 
@@ -424,22 +424,22 @@ def get_sector_bar(sec):
     return {'error:': 'kdb data not available.', 'query': query}
 
 
-@app.route('/pricestats/<sec>')
-def compute_sector_stats(sec):
-    print(f'xxxx GET /pricestats/<sec> : {sec}')
+@app.route('/pricestats/<s>')
+def compute_sector_stats(s):
+    print(f'xxxx GET /pricestats/<s> : {s}')
 
     if not q.is_connected():
         return {'error:': 'not connected to kdb'}
 
-    s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
+    sym = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
     if s == 'sector':
-        s = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
+        sym = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
     elif s == 'dow30':
-        s = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
+        sym = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
     elif s == 'etf':
         pass
 
-    query = f'get_price_bar[{s};1]'
+    query = f'get_price_bar[{sym};1]'
     print(f'xxxx get_price_bar query: {query}')  
 
     try:        
