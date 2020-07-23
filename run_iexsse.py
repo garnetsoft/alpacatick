@@ -148,24 +148,25 @@ url = f"https://cloud-sse.iexapis.com/stable/tops?token={TOKEN}&symbols={symbols
 response = with_requests(url)
 
 
+count = 0
+
 client = sseclient.SSEClient(response)
 for i, event in enumerate(client.events()):
-    data = json.loads(event.data)
-    #print(f'xxxx {i}, len: {len(data)}, data: {data}')
-
-    kobj = create_kdb_obj(data)
 
     try:
-        print('$$$$ KKKK debug upd data in kdb: ', kobj)
+        data = json.loads(event.data)
+        #print(f'xxxx {i}, len: {len(data)}, data: {data}')
+
+        kobj = create_kdb_obj(data)
+
         q.sendAsync("upd", np.string_(table), kobj)
+        count += 1
+
+        if count % 1000 == 0:
+            print('$$$$ (count}, {datetime.now} - KKKK debug upd data in kdb: ', kobj)
 
     except Exception as e:
         print('xxx processing to Kdb error: ', e)
         traceback.print_exc(file=sys.stdout)
 
-
-    #df = pd.DataFrame(data)
-    #df['lastSaleTimez'] = pd.to_datetime(df['lastSaleTime'], unit='ms')
-    #df['lastUpdatedz'] = pd.to_datetime(df['lastUpdated'], unit='ms')
-    #print(df)
 
