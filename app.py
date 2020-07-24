@@ -114,8 +114,8 @@ def get_live_positions():
         print(f'xxxx no positions')
     else:
         for i, pos in enumerate(positions):
-            print(f'$$$$ {i} pos: {pos.symbol}, qty: {pos.qty},  market_value: {pos.market_value}, unrealized_pnl: {pos.unrealized_pl}, side: {pos.side}, \
-                avg_entry_price:{pos.avg_entry_price}, current_price: {pos.current_price}' )
+            #print(f'$$$$ {i} pos: {pos.symbol}, qty: {pos.qty},  market_value: {pos.market_value}, unrealized_pnl: {pos.unrealized_pl}, side: {pos.side}, \
+            #    avg_entry_price:{pos.avg_entry_price}, current_price: {pos.current_price}' )
 
             pos_list.append([pos.symbol, pos.qty, pos.market_value, float(pos.unrealized_pl), pos.side, pos.avg_entry_price, pos.current_price])
             notional += float(pos.market_value)
@@ -783,7 +783,7 @@ def background_thread():
             socketio.sleep(13)
             count += 1
 
-            stats = q("get_summary22[]")
+            stats = q("get_summary22X[]")
             stats['count'] = count
             stats_json = stats.to_json(orient='records')
             #stats_html = stats.to_html(classes="table table-hover table-bordered table-striped",header=True)
@@ -816,7 +816,7 @@ def background_thread():
 
             # merged Long/Short signals -
             if len(signals_df) > 0:
-                signals_ui = signals_df[['count', 'sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal']]
+                signals_ui = signals_df[['count', 'sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal', 'ptype']]
                 print('xxxx signals_ui: ')
                 print(signals_ui)
 
@@ -836,8 +836,8 @@ def background_thread():
 
 
             # keep last 5 signals on display -
-            hist_cols = ['count', 'sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal']
-            signals_cols = ['id', 'qtm', 'src', 'sym', 'price', 'volume', 'ps', 'tick', 'signal']
+            hist_cols = ['count', 'sym', 'qtm', 'n', 'open', 'mn', 'mu', 'md', 'mx', 'vwap', 'close', 'dv', 'atr', 'signal', 'ptype']
+            signals_cols = ['id', 'qtm', 'src', 'sym', 'price', 'volume', 'ps', 'tick', 'signal', 'ptype']
 
             if len(signals_hist_df) > 0:
                 signals_html = signals_hist_df[hist_cols].to_html(classes="table table-hover table-bordered table-striped",header=True)

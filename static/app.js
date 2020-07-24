@@ -42,6 +42,12 @@ $(document).ready(function() {
         width: 150,
       },
       {
+        type: 'text',
+        title: 'wtm',
+        index: 'wtm',
+        width: 150,
+      },
+      {
         type: 'number',
         title: 'n',
         index: 'n',
@@ -75,6 +81,19 @@ $(document).ready(function() {
       },
       {
         type: 'number',
+        title: 'dv',
+        index: 'dv',
+        render: renderPriceFn,
+      },
+      {
+        type: 'number',
+        title: 'volume',
+        index: 'volume',
+        cellAlign: 'right',
+        format: 'number',            
+      },
+      {
+        type: 'number',
         title: 'vwap',
         index: 'vwap',
         //render: renderPriceFn,
@@ -86,16 +105,11 @@ $(document).ready(function() {
       },
       {
         type: 'number',
-        title: 'dv',
-        index: 'dv',
-        render: renderPriceFn,
-      },
-      {
-        type: 'number',
         title: 'close',
         index: 'close',
         render: renderCloseFn,
       },
+
       {
         type: 'text',
         title: 'sym',
@@ -129,6 +143,15 @@ $(document).ready(function() {
         }
       },
       {
+        title: 'ptype',
+        index: 'ptype',
+        type: 'text',
+        render: function(o) {
+          o.value = (o.value).toString().replace(/,/g, '');
+          return o;
+        }
+      },
+      {
         type: 'number',
         title: 'chg',
         index: 'chg',
@@ -141,13 +164,6 @@ $(document).ready(function() {
         index: 'atr',
         sortable: true,            
         render: renderAtrFn,
-      },          
-      {
-        type: 'number',
-        title: 'volume',
-        index: 'volume',
-        cellAlign: 'right',
-        format: 'number',            
       },
       {
         type: 'number',
@@ -261,14 +277,6 @@ var signalGrid = new FancyGrid({
         }
     },
     {
-      title: 'Volume',
-      index: 'volume',
-      type: 'number',
-      sortable: true,
-      cellAlign: 'right',
-      format: 'number',
-    },
-    {
         title: 'O(H/L)C',
         type: 'sparklineline',
         index: 'ps',
@@ -276,6 +284,23 @@ var signalGrid = new FancyGrid({
         sparkConfig: {
           barColor: '#60B3E2'
         }
+    },
+    {
+      title: 'ptype',
+      index: 'ptype',
+      type: 'text',
+      render: function(o) {
+        o.value = (o.value).toString().replace(/,/g, '');        
+        return o;
+      }
+    },
+    {
+      title: 'Volume',
+      index: 'volume',
+      type: 'number',
+      sortable: true,
+      cellAlign: 'right',
+      format: 'number',
     },
     {
         title: 'Last tick',
@@ -549,18 +574,19 @@ function formatToUnits(number, precision) {
 
 
 var signal_init = [
-  {"id":476, "count": 0, "qtm": "2020-05-21 19:26:13.758", "sym":"AAPL", "price":[125.78,125.85,125.91,125.92,125.92],"src":"http://ny529s.com/logo/AAPL.png","volume":86180.0, "ps":[2, 1, 5, 5], "tick": 7.7, "signal": "Long"},
-  {"id":1001, "count": 1,"qtm": "2020-05-21 19:26:13.758", "sym":"XOM",  "price":[85.05,85.135,85.135,85.075,85.075], "src":"http://ny529s.com/logo/XOM.png"," volume":79866.0, "ps":[2, 5, 1, 1], "tick": 8.8, "signal": "Short"}
+  {"id":476, "count": 0, "qtm": "2020-05-21 19:26:13.758", "sym":"AAPL", "price":[125.78,125.85,125.91,125.92,125.92],"src":"http://ny529s.com/logo/AAPL.png", "volume":86180.0, "ps":[2, 5, 1, 2], "tick": 7.7, "signal": "Long", "ptype":"OHLC"},
+  {"id":1001, "count": 1,"qtm": "2020-05-21 19:26:13.758", "sym":"XOM",  "price":[85.05,85.135,85.135,85.075,85.075], "src":"http://ny529s.com/logo/XOM.png",  "volume":79866.0, "ps":[2, 1, 5, 4], "tick": 8.8, "signal": "Short", "ptype":"OLHC"}
 ]
 
 
 // sym	qtm	n	open	mn	mu	md	mx	dv	vwap	close	chg	volume	l2dv	r2dv, ps
 var summary_init = [
-  {"id": 0, "sym":"xxx", "qtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[5, 4, 3, 2, 1] , "pbox":[5, 4, 3, 2, 1], "ps":[2, 1, 5, 4] }, 
-  {"id": 7, "sym":"yyy", "qtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[1, 2, 3, 4, 5] , "pbox":[1, 2, 3, 4, 5], "ps":[2, 1, 5, 4] }, 
+  {"id": 0, "sym":"xxx", "qtm": "2020-05-21 19:26:13.758", "wtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[5, 4, 3, 2, 1] , "pbox":[5, 4, 3, 2, 1], "ps":[2, 5, 5, 4], "ptype":"OHLC" }, 
+  {"id": 7, "sym":"yyy", "qtm": "2020-05-21 19:26:13.758", "wtm": "2020-05-21 19:26:13.758", "n":0, "open":0.99, "mn":0.99, "mu":0.99, "md":0.99, "mx":0.99, "dv":0.99, "vwap":0.99, "close":0.99, "chg":0.99, "volume":7, "l2dv": 95.5, "r2dv": 105.0, "atr": 0, "price":[1, 2, 3, 4, 5] , "pbox":[1, 2, 3, 4, 5], "ps":[2, 1, 5, 4], "ptype":"OLHC" }, 
 ];
 
 
+// to delete -
 var series2 = [{
   name: 'XXXXX',
   data: [43934, 52503, 57177, 69658, 97031, 119931, 137133, 154175]
