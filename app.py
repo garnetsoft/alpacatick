@@ -569,8 +569,8 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
         else:
             prev = signals_count_map[sym]
             
-            #if (prev['qtm'] != row['qtm']) and (prev['close'] != row['close']):
-            if prev['qtm'] != row['qtm']:
+            if (prev['qtm'] != row['qtm']) and (prev['close'] != row['close']):
+            #if prev['qtm'] != row['qtm']:
                 signals_count_dict[sym] += 1
                 signals_count_map[sym] = row  # update to the latest signal details -
 
