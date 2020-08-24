@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>volatility</title>
+
+    <link rel="stylesheet" type="text/css" href="https://code.highcharts.com/css/stocktools/gui.css">
+    <link rel="stylesheet" type="text/css" href="https://code.highcharts.com/css/annotations/popup.css">
+
+    <script src="https://code.jquery.com/jquery-3.4.1.js" integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU=" crossorigin="anonymous"></script>
+
+    <script src="https://code.highcharts.com/stock/highstock.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/data.js"></script>
+
+    <script src="https://code.highcharts.com/stock/indicators/indicators-all.js"></script>
+    <script src="https://code.highcharts.com/stock/modules/drag-panes.js"></script>
+
+    <script src="https://code.highcharts.com/modules/annotations-advanced.js"></script>
+    <script src="https://code.highcharts.com/modules/price-indicator.js"></script>
+    <script src="https://code.highcharts.com/modules/full-screen.js"></script>
+
+    <script src="https://code.highcharts.com/modules/stock-tools.js"></script>
+
+    <style>
+        #container {
+            max-height: 800px;
+            height: 75vh;
+        }
+
+        /* Conflict with Bootstrap, not needed after v7.0.1 */
+        .highcharts-bindings-wrapper * {
+            box-sizing: content-box;
+        }
+    </style>
+
+    <script src="static/chart2.js"></script>
+
+</head>
+<body>
+    <div id="debug"></div>    
+    <h1>{{ chart_name }}: </h1>
+
+    <form class="form-inline" method="POST" action="{{ url_for('test_chart') }}">
+        <div class="form-group">
+          <div class="input-group">
+              <span class="input-group-addon">Please select</span>
+                  <select id="ticker_select" name="ticker_select" class="selectpicker form-control">
+                    {% for o in tickers %}
+                        {% if o == selected_ticker %}
+                        <option value="{{ o }}" selected>{{ o }}</option>
+                        {% else %}
+                        <option value="{{ o }}">{{ o }}</option>
+                        {% endif %}
+                    {% endfor %}
+                  </select>
+          </div>
+          <button id='submit' type="submit" class="btn btn-default">Go</button>
+        </div>
+    </form>
+
+    <h2>Stats Summary:</h2>
+    <div id="stats"></div>
+    <hr>
+    
+    <h2>Real-time chart: <button id="small">Add Chart</button></h2>
+
+</body>
+</html>

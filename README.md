@@ -1,5 +1,385 @@
 "# alpaca data" 
 
+
+8/20/2020:
+
+/ 
+ opt thursday short model:
+   - on Thursday, sell ATM call, put for next week's Friday Exp.
+   - check daily return till next Thursday's close and hold to expiration returns.
+\
+
+opt_thursday_short:{[d;s]
+ / s:`AAPL;d:2020.08.13
+ expdate:d+8;
+ dclose:select from ohlc2 where sym=s, Date=d;
+ pxclose:max exec Close from dclose;
+ pxcsk:first exec strikePrice from (select from opt where symbol=s, side=`call, lastUpdated=d, expirationDate=expdate, strikePrice>=pxclose );
+ shortcall:(update D:m[d] from update d:lastUpdated mod 7, sym:symbol, Date:lastUpdated from (select from opt where symbol=s, lastUpdated>=d, expirationDate=expdate, strikePrice=pxcsk, side=`call  ) );
+ shortcallandclose:shortcall lj `sym`Date xkey (`sym`Date`Open`High`Low`Close`Volume`sigma#select from ohlc2 where sym=s, Date>=d);
+ callret:update ret:log(closingPrice%prev closingPrice) from shortcallandclose;
+ callret
+ }
+
+
+wow:raze {opt_thursday_short[2020.07.16;x] } each exec distinct symbol from  select by symbol from opt
+
+wow
+
+select count i, avg ret, closingPrice wavg ret by Date, D from wow
+
+
+
+Go to %systemroot%\System32\drivers\etc
+Backup the hosts file
+Then open notepad with administrator rights.
+Navigate to the same folder and open the hosts file
+Make sure the first line after the # lines (comments) is 127.0.0.1 localhost and the second is ::1 localhost
+Then open cmd and run the command ipconfig /flushdns
+Restart the browser or whatever program you are using.
+
+
+8/19/2020:
+
+$(function () {
+    $('#container').highcharts({
+
+        chart: {
+            type: 'boxplot'
+        },
+
+        title: {
+            text: 'Highcharts Box Plot Example'
+        },
+
+        legend: {
+            enabled: false
+        },
+
+        xAxis: {
+            categories: ['1', '2', '3', '4', '5'],
+            title: {
+                text: 'Experiment No.'
+            }
+        },
+
+        yAxis: {
+            title: {
+                text: 'Observations'
+            },
+            plotLines: [{
+                value: 932,
+                color: 'red',
+                width: 1,
+                label: {
+                    text: 'Theoretical mean: 932',
+                    align: 'center',
+                    style: {
+                        color: 'gray'
+                    }
+                }
+            }]
+        },
+
+        series: [{
+            name: 'Observations',
+            data: [
+                [760, 801, 848, 895, 965],
+                [733, 853, 939, 980, 1080],
+                [714, 762, 817, 870, 918],
+                [724, 802, 806, 871, 950],
+                [834, 836, 864, 882, 910]
+            ],
+            tooltip: {
+                headerFormat: '<em>Experiment No {point.key}</em><br/>'
+            }
+        }]
+
+    });
+
+    $('#btn').click(function () {
+        var chart = $('#container').highcharts();
+
+        chart.yAxis[0].plotLinesAndBands[0].options.value = 950;
+        chart.yAxis[0].plotLinesAndBands[0].options.width = 10;
+        chart.yAxis[0].plotLinesAndBands[0].label.attr({
+            text: 'Test'
+        });
+
+        chart.yAxis[0].redraw();
+    });
+});
+
+
+var chart = Highcharts.chart('container', {
+
+    xAxis: {
+        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    },
+
+    series: [{
+        data: [29.9, 71.5, 106.4, 129.2, 144.0, 176.0, 135.6, 148.5, 216.4, 194.1, 95.6, 54.4]
+    }]
+});
+
+
+// the button action
+var hasPlotBand = false,
+    $button = $('#button');
+
+$button.click(function () {
+    if (!hasPlotBand) {
+        chart.xAxis[0].addPlotBand({
+            from: 5.5,
+            to: 7.5,
+            color: '#FCFFC5',
+            id: 'plot-band-1'
+        });
+
+        chart.yAxis[0].addPlotBand({
+            from: -100,
+            to: -200,
+            color: '#FCFFC5',
+            id: 'plot-band-1'
+        });
+                
+        $button.html('Remove plot band');
+    } else {
+        chart.xAxis[0].removePlotBand('plot-band-1');
+        $button.html('Add plot band');
+    }
+    hasPlotBand = !hasPlotBand;
+});
+
+
+// add multiple series at once -
+
+    seriesOptions[i] = {
+        name: name,
+        data: data  // list of [[t1, 101], ...[tn, 101*n]]
+    };
+
+function createChart() {
+
+    Highcharts.stockChart('container', {
+
+        rangeSelector: {
+            selected: 4
+        },
+
+        yAxis: {
+            labels: {
+                formatter: function () {
+                    return (this.value > 0 ? ' + ' : '') + this.value + '%';
+                }
+            },
+            plotLines: [{
+                value: 0,
+                width: 2,
+                color: 'silver'
+            }]
+        },
+
+        plotOptions: {
+            series: {
+                compare: 'percent',
+                showInNavigator: true
+            }
+        },
+
+        tooltip: {
+            pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y}</b> ({point.change}%)<br/>',
+            valueDecimals: 2,
+            split: true
+        },
+
+        series: seriesOptions
+    });
+}
+
+
+            chart.addSeries({
+                linkedTo: 'aapl-ohlc',
+                type: type,
+                params: {
+                    period: parseInt(period, 10)
+                }
+            });
+
+
+            var chartDiv = document.createElement('div');
+            chartDiv.className = 'chart';
+            document.getElementById('container').appendChild(chartDiv);
+
+            // create a new chart in chartDiv -
+            Highcharts.chart(chartDiv, {});
+
+
+8/16/2020:
+
+Train a model, build a front-end application around it with Streamlit, get the application working locally (on your computer), once it’s working wrap the application with Docker, then deploy the Docker container to Heroku or another cloud provider.
+
+
+8/12/2020:
+
+$(document).ready(function() {
+   $('#cars').change(function() {
+     var parentForm = $(this).closest("form");
+     if (parentForm && parentForm.length > 0)
+       parentForm.submit();
+   });
+});
+
+
+var defaultData = 'https://demo-live-data.highcharts.com/time-data.csv';
+var urlInput = document.getElementById('fetchURL');
+var pollingCheckbox = document.getElementById('enablePolling');
+var pollingInput = document.getElementById('pollingTime');
+
+function createChart() {
+    Highcharts.chart('container', {
+        chart: {
+            type: 'spline'
+        },
+        title: {
+            text: 'Live Data'
+        },
+        accessibility: {
+            announceNewData: {
+                enabled: true,
+                minAnnounceInterval: 15000,
+                announcementFormatter: function (allSeries, newSeries, newPoint) {
+                    if (newPoint) {
+                        return 'New point added. Value: ' + newPoint.y;
+                    }
+                    return false;
+                }
+            }
+        },
+        data: {
+            csvURL: urlInput.value,
+            enablePolling: pollingCheckbox.checked === true,
+            dataRefreshRate: parseInt(pollingInput.value, 10)
+        }
+    });
+
+    if (pollingInput.value < 1 || !pollingInput.value) {
+        pollingInput.value = 1;
+    }
+}
+
+urlInput.value = defaultData;
+
+// We recreate instead of using chart update to make sure the loaded CSV
+// and such is completely gone.
+pollingCheckbox.onchange = urlInput.onchange = pollingInput.onchange = createChart;
+
+// Create the chart
+createChart();
+
+
+var seriesOptions = [],
+    seriesCounter = 0,
+    names = ['MSFT', 'AAPL', 'GOOG'];
+
+/**
+ * Create the chart when all data is loaded
+ * @returns {undefined}
+ */
+function createChart() {
+
+    Highcharts.stockChart('container', {
+
+        rangeSelector: {
+            selected: 4
+        },
+
+        yAxis: {
+            labels: {
+                formatter: function () {
+                    return (this.value > 0 ? ' + ' : '') + this.value + '%';
+                }
+            },
+            plotLines: [{
+                value: 0,
+                width: 2,
+                color: 'silver'
+            }]
+        },
+
+        plotOptions: {
+            series: {
+                compare: 'percent',
+                showInNavigator: true
+            }
+        },
+
+        tooltip: {
+            pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y}</b> ({point.change}%)<br/>',
+            valueDecimals: 2,
+            split: true
+        },
+
+        series: seriesOptions
+    });
+}
+
+function success(data) {
+    var name = this.url.match(/(msft|aapl|goog)/)[0].toUpperCase();
+    var i = names.indexOf(name);
+    seriesOptions[i] = {
+        name: name,
+        data: data
+    };
+
+    // As we're loading the data asynchronously, we don't know what order it
+    // will arrive. So we keep a counter and create the chart when all the data is loaded.
+    seriesCounter += 1;
+
+    if (seriesCounter === names.length) {
+        createChart();
+    }
+}
+
+Highcharts.getJSON(
+    'https://cdn.jsdelivr.net/gh/highcharts/highcharts@v7.0.0/samples/data/msft-c.json',
+    success
+);
+Highcharts.getJSON(
+    'https://cdn.jsdelivr.net/gh/highcharts/highcharts@v7.0.0/samples/data/aapl-c.json',
+    success
+);
+Highcharts.getJSON(
+    'https://cdn.jsdelivr.net/gh/highcharts/highcharts@v7.0.0/samples/data/goog-c.json',
+    success
+);
+
+08/10/2020: 
+
+var chart = Highcharts.chart('container', {
+       title: {
+              text: 'My chart'
+       },
+       series: [{
+           data: [1, 3, 2, 4]
+       }]
+})
+
+<form class="form-inline" method="POST" action="{{ url_for('test') }}">
+  <div class="form-group">
+    <div class="input-group">
+        <span class="input-group-addon">Please select</span>
+            <select name="comp_select" class="selectpicker form-control">
+              {% for o in data %}
+              <option value="{{ o.name }}">{{ o.name }}</option>
+              {% endfor %}
+            </select>
+    </div>
+    <button type="submit" class="btn btn-default">Go</button>
+  </div>
+</form>
+
+
 https://bost.ocks.org/mike/bubble-map/
 
 

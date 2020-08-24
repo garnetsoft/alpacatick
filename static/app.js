@@ -468,6 +468,7 @@ var signalGrid = new FancyGrid({
     $('#info').text(JSON.stringify(msg)).html();
   });
 
+
   // other commands
   $('form#emit').submit(function(event) {
     socket.emit('my_info', {data: $('#emit_data').val()});
@@ -483,6 +484,7 @@ var signalGrid = new FancyGrid({
     socket.emit('disconnect_request');
     return false;
   });
+  
 
 }); // eod-of-documary.ready()
 

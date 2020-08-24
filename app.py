@@ -16,7 +16,6 @@ import json
 import configparser
 from collections import defaultdict
 
-
 import alpaca_trade_api as tradeapi
 import threading
 import time
@@ -64,7 +63,8 @@ def load_app_config(config_file):
 
 def initQ():
     # initialize connection
-    q.open()
+    if not q.is_connected():
+        q.open()
 
     print(q)
     print('IPC version: %s. Is connected: %s' % (q.protocol_version, q.is_connected()))
@@ -113,7 +113,7 @@ def get_live_positions():
     if len(positions) == 0:
         print(f'xxxx no positions')
     else:
-        for i, pos in enumerate(positions):
+        for _, pos in enumerate(positions):
             #print(f'$$$$ {i} pos: {pos.symbol}, qty: {pos.qty},  market_value: {pos.market_value}, unrealized_pnl: {pos.unrealized_pl}, side: {pos.side}, \
             #    avg_entry_price:{pos.avg_entry_price}, current_price: {pos.current_price}' )
 
@@ -200,11 +200,10 @@ def send_entry_order2(sym, size, side, signal, entry_type):
     order_id_dict[sym] = order_id
     orders_hist.append([datetime.now(), sym, size, side, entry_type, signal['close'], signal['qtm'], order_id])
 
-    pos[sym] = signal
-
     #print(f"EEEE sent order for {entry_type} signal: {sym}, status: {status}")
     if status:
         print(f"EEEE sent order for {entry_type} signal: {sym}, status: {status}")
+        pos[sym] = signal
     else:
         ## raise alert !!
         alert_msg = f"EEEE ERROR in sent order for {entry_type} signal: {sym}, status: {status}"
@@ -232,9 +231,17 @@ def send_exit_order2(sym, size, side, signal, exit_type):
     ## - add to order_hist
     org_order_id = order_id_dict.get(sym, None)
     orders_hist.append([datetime.now(), sym, size, side, exit_type, signal['close'], signal['qtm'], org_order_id])
-    #pos[sym] = signal
 
-    print(f"EEEE sent order for {exit_type} signal: {sym}, status: {status}")
+    if status:
+        print(f"EEEE sent order for {exit_type} signal: {sym}, status: {status}")
+        #pos[sym] = signal
+    else:
+        ## raise alert !!
+        alert_msg = f"EEEE ERROR in sent order for {exit_type} signal: {sym}, status: {status}"
+        global alerts
+        print(alert_msg)
+        alerts[sym] = alert_msg
+
 
     return status
 
@@ -442,7 +449,7 @@ def compute_sector_stats(s):
     query = f'get_price_bar[{sym};1]'
     print(f'xxxx get_price_bar query: {query}')  
 
-    try:        
+    try:
         df = q(query)
         df = df.replace(0, np.nan).bfill().ffill()
         df = rebase_series(df)
@@ -538,6 +545,76 @@ def get_pnl_update():
 
 
 
+@app.route('/chart', methods=['GET', 'POST'])
+def test_chart():
+    print(f'xxxx {datetime.now()} test_chart request: {request}')
+
+    ## tickers = ['SPY', 'AAPL', 'DKNG', 'XOM']
+
+    if request.method == 'GET':
+        return render_template('chart.html', trading_enabled=trading_enabled, chart_name='price/volatility chart', tickers=tickers)
+
+    # process selected ticker -
+    s = request.form['ticker_select']
+    print(f'xxxx test_chart POST request: {s}')
+
+    return render_template('chart.html', trading_enabled=trading_enabled, chart_name=f'chart2 - {s}', selected_ticker=s, tickers=tickers)
+
+
+
+@app.route('/chartdata/<s>')
+def compute_stats(s):
+    print(f'xxxx {datetime.now()} GET /chartdata/<s> : {s}')
+
+    if not q.is_connected():
+        return {'error:': 'not connected to kdb'}
+    
+    try:
+        df = q(f'get_iday_bar2[1;`{s}]')
+        chartjson = df.to_json(orient='values')
+
+        print('xxxx get_iday_bar: ', df.tail(2))
+        print(f"xxxx chartjson: {df.tail(2).to_json(orient='values')}")
+
+        return chartjson
+
+    except Exception as e:
+        print(f'ERROR: in querying Kdb chartdata, {e}')
+        traceback.print_exc(file=sys.stdout)
+
+    return {'error:': 'kdb data not available.'}
+
+
+@app.route('/statsdata')
+def get_statsdata():
+    print(f'xxxx {datetime.now()} GET /statsdata...')
+
+    if not q.is_connected():
+        return {'error:': 'not connected to kdb'}
+    
+    try:
+        query = """
+        `spk_updown_ratio xdesc  raze { enlist 10#last  `qtm`sym`spk_updown_ratio xcols update spk_updown_ratio: spk_up_sum % abs spk_down_sum from  
+         update spk_up_count:sum ?[spk_mv_xsd>0;1;0], spk_down_count:sum ?[spk_mv_xsd<0;1;0],  spk_up_sum:sum ?[spk_mv_xsd>0;spk_mv_xsd;0], spk_down_sum:sum ?[spk_mv_xsd<0;spk_mv_xsd;0]  
+         from get_iday_bar2[1;x] } each exec distinct symbol from iextops2
+        """
+        print('xxxx statsdata query:')
+        #print(query)
+
+        df = q(query)
+        print('xxxx statsdata: ', df.tail(2))
+        statshtml = df.to_html(classes="table table-hover table-bordered table-striped",header=True)
+
+        return statshtml
+
+    except Exception as e:
+        print(f'ERROR: in querying Kdb statsdata, {e}')
+        traceback.print_exc(file=sys.stdout)
+
+    return {'error:': 'statsdata not available.'}
+
+
+
 ### global signal map - so it doesn't get overwritten when browser refreshes ###
 ## IMPL
 long_signals_count_dict = defaultdict(int)
@@ -569,8 +646,8 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
         else:
             prev = signals_count_map[sym]
             
-            if (prev['qtm'] != row['qtm']) and (prev['close'] != row['close']):
-            #if prev['qtm'] != row['qtm']:
+            #if (prev['qtm'] != row['qtm']) and (prev['close'] != row['close']):
+            if prev['qtm'] != row['qtm']:
                 signals_count_dict[sym] += 1
                 signals_count_map[sym] = row  # update to the latest signal details -
 
@@ -604,14 +681,14 @@ def update_signals_count(signals_count_map, signals_count_dict, signals_df, long
 
                 # exit for profit
                 elif signals_count_dict[sym] > 9:
-                    #if not config.get('enable_trading', False) == 'True':
-                    #    print('XXXX trading is NOT enabled, ignoring {long_or_short} signal for {sym}')
-                    #    pass
-                    #elif pos.get(sym, None) is None:
                     if pos.get(sym, None) is None:
+                        print(f'EEEE no entry positions found, skipping (exit) order for {sym}')
                         pass
                     else:
                         side = 'buy' if long_or_short < 0 else 'sell'
+
+                        # query API for position !!!
+
 
                         if signals_count_dict[sym] == 10:
                             # taking profit on existing order - do 1/2, 1/4, 1/4 method?
@@ -720,7 +797,7 @@ def calc_pnl(g, long_or_short):
     entry_price = g.iloc[0]['ref_price']
     total_pnl = 0.0
 
-    for i, (index, r) in enumerate(g.iterrows()):
+    for i, (_, r) in enumerate(g.iterrows()):
         # print(f'xxxx: {i}, {r}')
         # if not r['ord_type'].startswith('ENTRY'): # calc each pnl
         if i > 0:
@@ -925,7 +1002,7 @@ def background_thread():
     except Exception as ex:
         print(f"ERROR: background thread exception: {ex}")
         traceback.print_exc(file=sys.stdout)
-        sys.exit(-1)
+        #sys.exit(-1)
 
 
 ### API info -
@@ -938,13 +1015,6 @@ api = tradeapi.REST(API_KEY, API_SECRET, APCA_API_BASE_URL, 'v2')
 
 get_account_info()
 # send test order -
-
-
-print('xxxx connect to Kdb...')
-
-# create connection object
-#q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
-q = qconnection.QConnection(host='aq101', port=6001, pandas=True)
 
 
 ## model settings:
@@ -969,6 +1039,7 @@ def update_configs(**kwargs):
 
     return None
 
+
 #update_configs(**{'key':'value', 'haha':'hehe'})    
 update_configs(**{})
 alerts = {'SPY': 'THIS IS A TEST ALERT.'}
@@ -983,7 +1054,27 @@ pd.set_option('display.width', None)
 # write all signals_ui df to file for backtest -
 
 
+
+print('xxxx connect to Kdb...')
+
+# create connection object
+#q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
+q = qconnection.QConnection(host='aq101', port=6002, pandas=True)
+q.open()
+
+#df = q('exec ticker from select from sector')
+df = q('exec ticker from `ticker xasc select from dow30')
+tickers = ['SPY', 'DKNG', 'RKT', 'SQ', 'TWTR', 'WYNN', 'SRNE', 'NIO', 'BJ', 'XLC', 'XLK'] + [x.decode('utf-8') for x in df]
+#tickers = ['SPY', 'AAPL', 'DKNG', 'RKT', 'GS', 'XOM', 'TWTR']
+
+#df = q('exec distinct symbol from `symbol xasc iextops2')
+#df = q('exec sym from `spk_updown_ratio xdesc  raze { enlist last  `qtm`sym`spk_updown_ratio xcols update spk_updown_ratio: spk_up_sum%abs spk_down_sum from  update spk_up_count:sum ?[spk_mv_xsd>0;1;0], spk_down_count:sum ?[spk_mv_xsd<0;1;0],  spk_up_sum:sum ?[spk_mv_xsd>0;spk_mv_xsd;0], spk_down_sum:sum ?[spk_mv_xsd<0;spk_mv_xsd;0] from get_iday_bar2[1;x] } each exec distinct symbol from iextops2')
+#tickers = [x.decode('utf-8') for x in df]
+
+print(f'xxxx tickers: {tickers}')
+
+
 #### main ####
 if __name__ == '__main__':
-    #socketio.run(app, debug=True)
+    #socketio.run(app, host='0.0.0.0', debug=True)
     socketio.run(app, debug=False, host='0.0.0.0', port=8501)
