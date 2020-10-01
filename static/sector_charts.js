@@ -335,6 +335,8 @@ $(document).ready(function() {
   
                           // override the chart with entire new series
                           console.log('xxxx stats_data:')
+                          console.log(rdata)
+			 
                           var stats_obj = JSON.parse(rdata.stats_data)
                           //console.log(stats_obj)
 

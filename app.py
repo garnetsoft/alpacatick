@@ -406,7 +406,7 @@ def get_sector_bar(s):
     if s == 'sector':
         sym = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
     elif s == 'dow30':
-        sym = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
+        sym = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS`AMGN`CRM`HON'
     elif s == 'etf':
         pass
 
@@ -442,7 +442,7 @@ def compute_sector_stats(s):
     if s == 'sector':
         sym = '`SPY`XLK`XLU`XLY`XLP`XLF`XLI`XLV`XLB`XLE`XLC`XLRE'
     elif s == 'dow30':
-        sym = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS'
+        sym = '`SPY`MMM`AXP`AAPL`BA`CAT`CVX`CSCO`KO`DOW`XOM`GS`HD`IBM`INTC`JNJ`JPM`MCD`MRK`MSFT`NKE`PFE`PG`RTX`TRV`UNH`VZ`V`WMT`WBA`DIS`AMGN`CRM`HON'
     elif s == 'etf':
         pass
 
@@ -496,7 +496,7 @@ def get_tick_update2():
         return {'error:': 'not connected to kdb'}
     
     try:
-        query = 'get_tick_update `SPY`AAPL'
+        query = 'get_tick_update2 `AAPL`SPY'
         df = q(query)
         print(f'xxxx tickupdate2: {query}, df:')
 
@@ -594,14 +594,15 @@ def get_statsdata():
     
     try:
         query = """
-        `spk_updown_ratio xdesc  raze { enlist 10#last  `qtm`sym`spk_updown_ratio xcols update spk_updown_ratio: spk_up_sum % abs spk_down_sum from  
-         update spk_up_count:sum ?[spk_mv_xsd>0;1;0], spk_down_count:sum ?[spk_mv_xsd<0;1;0],  spk_up_sum:sum ?[spk_mv_xsd>0;spk_mv_xsd;0], spk_down_sum:sum ?[spk_mv_xsd<0;spk_mv_xsd;0]  
+        `spk_updown_ratio xdesc  raze { 0!select last qtm, last  spk_updown_ratio, first o, max h, min l, last c, sum v, last ivwap, last sigma, last px_chg_1sd, last spk_mv_xsd by sym  from
+         update spk_updown_ratio: spk_up_sum % abs spk_down_sum from
+         update spk_up_count:sum ?[spk_mv_xsd>0;1;0], spk_down_count:sum ?[spk_mv_xsd<0;1;0],  spk_up_sum:sum ?[spk_mv_xsd>0;spk_mv_xsd;0], spk_down_sum:sum ?[spk_mv_xsd<0;spk_mv_xsd;0]
          from get_iday_bar2[1;x] } each exec distinct symbol from iextops2
         """
         print('xxxx statsdata query:')
         #print(query)
 
-        df = q(query)
+        df = q('get_spk_updown_ratio[]')
         print('xxxx statsdata: ', df.tail(2))
         statshtml = df.to_html(classes="table table-hover table-bordered table-striped",header=True)
 
@@ -874,7 +875,7 @@ def background_thread():
             print(f'XXXX DEBUG: UTC_TIME: {utc_time}, {cur_hr}, {cur_mm}')
 
             signals_df = pd.DataFrame()
-            if ((cur_hr <=13 ) and (cur_mm < 35)) or (cur_hr < 13):
+            if ((cur_mm < 45) and (cur_hr <=13 )) or (cur_hr < 13):
                 print(f'HAHA: {datetime.now()} - market is not open yet.  trading starts 5 minutes after open.')
             elif ((cur_hr == 19) and (cur_mm >= 55)):
                 if trading_enabled:
@@ -1058,13 +1059,14 @@ pd.set_option('display.width', None)
 print('xxxx connect to Kdb...')
 
 # create connection object
-#q = qconnection.QConnection(host='localhost', port=5001, pandas=True)
-q = qconnection.QConnection(host='aq101', port=6002, pandas=True)
+q = qconnection.QConnection(host='localhost', port=6001, pandas=True)
+#q = qconnection.QConnection(host='aq101', port=6002, pandas=True)
 q.open()
 
 #df = q('exec ticker from select from sector')
 df = q('exec ticker from `ticker xasc select from dow30')
-tickers = ['SPY', 'DKNG', 'RKT', 'SQ', 'TWTR', 'WYNN', 'SRNE', 'NIO', 'BJ', 'XLC', 'XLK'] + [x.decode('utf-8') for x in df]
+test2 = q('distinct (exec ticker from `ticker xasc select from test2 where not ticker=`SPY),(exec ticker from `ticker xasc select from dow30)')
+tickers = ['SPY'] + [x.decode('utf-8') for x in test2]
 #tickers = ['SPY', 'AAPL', 'DKNG', 'RKT', 'GS', 'XOM', 'TWTR']
 
 #df = q('exec distinct symbol from `symbol xasc iextops2')

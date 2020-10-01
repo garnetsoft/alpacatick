@@ -303,12 +303,14 @@ var signalGrid = new FancyGrid({
       format: 'number',
     },
     {
-        title: 'Last tick',
+        title: 'Last tick2',
         index: 'tick',
         type: 'number',
         //sortable: true,
         //cellAlign: 'right',
-        format: 'number',
+        //format: 'number',
+	render: renderCloseFn,
+	/*
         render: function(o) {
           if (o.data.signal == 'Mom_Long') {
             o.style = {
@@ -322,8 +324,13 @@ var signalGrid = new FancyGrid({
             };
           }
 
-          return o;
+	  console.log('xxxx Last tick')
+	  console.log(o)
+	  console.log(o.data.tick)
+
+          return o
         }
+	*/
       },
       {
         title: 'Signal',
